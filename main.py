@@ -23,7 +23,7 @@ if "auth" not in st.session_state:
     st.session_state["auth"] = False
     st.session_state["u"] = {}
 
-# --- GİRİŞ EKRANI ---
+# --- GİRİŞ EKRANI (HATA DÜZELTİLDİ) ---
 if not st.session_state["auth"]:
     st.subheader("🔒 Fırat Yıldız Mühendislik - ERP Girişi")
     em = st.text_input("E-Posta")
@@ -33,9 +33,10 @@ if not st.session_state["auth"]:
         row = df[(df["Email"] == em) & (df["Şifre"] == str(pas))]
         if not row.empty:
             st.session_state["auth"] = True
-            st.session_state["u"] = row.iloc.to_dict()
+            st.session_state["u"] = row.iloc[0].to_dict() # KESİN ÇÖZÜM BURADA YAPILDI ([0])
             st.rerun()
-        else: st.error("Hatalı Giriş!")
+        else:
+            st.error("Hatalı Giriş!")
     st.stop()
 
 u = st.session_state["u"]
@@ -112,7 +113,6 @@ with tab2:
     st.subheader("📅 Bugün Şantiyelerden Gelen Depo Hareketleri")
     st.dataframe(df_df, use_container_width=True)
 
-    # 📥 EXCEL AYRI SÜTUN DÜZELTMESİ (sep=";" eklendi)
     if not df_df.empty:
         csv_depo_data = df_df.to_csv(index=False, sep=";").encode('utf-8-sig')
         st.download_button(label="📥 Bugünkü Depo Raporunu Excel Olarak İndir (Ayrı Sütunlu)", data=csv_depo_data, file_name=f"{d_tr}_gunluk_depo_raporu.csv", mime="text/csv", use_container_width=True)
@@ -177,7 +177,6 @@ with tab3:
             st.write(f"📊 **Proje:** {r_cari} | **Sözleşme:** {sz_b:,.2f} {pb_b} | **Hakediş:** {th_b:,.2f} {pb_b} | **Kalan:** {max(sz_b-th_b, 0.0):,.2f} {pb_b}")
             st.dataframe(df_r_filtered, use_container_width=True)
             
-            # 📥 EXCEL AYRI SÜTUN DÜZELTMESİ (sep=";" eklendi)
             csv_data = df_r_filtered.to_csv(index=False, sep=";").encode('utf-8-sig')
             c_down1, c_down2 = st.columns(2)
             c_down1.download_button(label="📥 Bu Raporu Düzenli EXCEL Olarak Bilgisayara İndir", data=csv_data, file_name=f"{r_cari}_resmi_rapor.csv", mime="text/csv", use_container_width=True)
