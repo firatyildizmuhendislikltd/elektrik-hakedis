@@ -23,7 +23,7 @@ if "auth" not in st.session_state:
     st.session_state["auth"] = False
     st.session_state["u"] = {}
 
-# --- GİRİŞ EKRANI (HATA DÜZELTİLDİ) ---
+# --- GİRİŞ EKRANI ---
 if not st.session_state["auth"]:
     st.subheader("🔒 Fırat Yıldız Mühendislik - ERP Girişi")
     em = st.text_input("E-Posta")
@@ -33,16 +33,15 @@ if not st.session_state["auth"]:
         row = df[(df["Email"] == em) & (df["Şifre"] == str(pas))]
         if not row.empty:
             st.session_state["auth"] = True
-            st.session_state["u"] = row.iloc[0].to_dict() # KESİN ÇÖZÜM BURADA YAPILDI ([0])
+            st.session_state["u"] = row.iloc.to_dict()
             st.rerun()
-        else:
-            st.error("Hatalı Giriş!")
+        else: st.error("Hatalı Giriş!")
     st.stop()
 
 u = st.session_state["u"]
-c_u, c_l = st.columns(2)
-c_u.markdown(f"👤 {u['İsim']} {u['Soyisim']} | 🎭 `{u['Rol']}`")
-if c_l.button("🚪 Çıkış", use_container_width=True):
+col_u, col_l = st.columns(2)
+col_u.markdown(f"👤 {u['İsim']} {u['Soyisim']} | 🎭 `{u['Rol']}`")
+if col_l.button("🚪 Çıkış", use_container_width=True):
     st.session_state["auth"] = False
     st.rerun()
 
@@ -55,15 +54,22 @@ with tab1:
     df_h = pd.read_csv(FILES["hakedis"])
     cari_secim = st.selectbox("Raporlanacak Cari / İş Seçin", options=df_c["Cari Adı"].unique() if not df_c.empty else ["Cari Yok"])
     df_hf = df_h[df_h["Cari Adı"] == cari_secim]
-    pb = df_c[df_c["Cari Adı"] == cari_secim]["Para Birimi"].values if (not df_c.empty and cari_secim in df_c["Cari Adı"].values) else "TL"
+    
+    if not df_c.empty and cari_secim in df_c["Cari Adı"].values:
+        pb = str(df_c[df_c["Cari Adı"] == cari_secim]["Para Birimi"].values[0])
+    else:
+        pb = "TL"
     
     if u["Rol"] in ["Admin", "Yönetici"]:
-        sz = df_c[df_c["Cari Adı"] == cari_secim]["Sözleşme Bedeli"].sum()
-        th = df_hf["Toplam Tutar"].sum()
+        sz = float(df_c[df_c["Cari Adı"] == cari_secim]["Sözleşme Bedeli"].sum()) if not df_c.empty else 0.0
+        th = float(df_hf["Toplam Tutar"].sum()) if not df_hf.empty else 0.0
+        kb = float(max(sz - th, 0.0))
+        
         m1, m2, m3 = st.columns(3)
         m1.metric("Sözleşme Bedeli", f"{sz:,.2f} {pb}")
         m2.metric("Hak Edilen Tutar (Canlı)", f"{th:,.2f} {pb}")
-        m3.metric("Kalan Bakiye", f"{max(sz-th, 0.0):,.2f} {pb}")
+        m3.metric("Kalan Bakiye", f"{kb:,.2f} {pb}")
+        st.markdown("---")
 
     st.subheader("📋 Güncel Hakediş Tablosu")
     st.dataframe(df_hf if u["Rol"] in ["Admin", "Yönetici"] else df_hf[["Tarih", "Cari Adı", "Kategori", "İş Kalemi", "Birim", "Miktar", "Para Birimi", "Personel"]], use_container_width=True)
@@ -123,7 +129,7 @@ with tab2:
         if not df_unpriced.empty:
             idx_d = st.selectbox("Fiyatlandırılacak Şantiye Depo Satır Numarasını Seçin:", df_unpriced.index.tolist())
             d_row = df_d.loc[idx_d]
-            c_pb = df_c[df_c["Cari Adı"] == d_row["Cari Adı"]]["Para Birimi"].values if d_row["Cari Adı"] in df_c["Cari Adı"].values else "TL"
+            c_pb = df_c[df_c["Cari Adı"] == d_row["Cari Adı"]]["Para Birimi"].values[0] if d_row["Cari Adı"] in df_c["Cari Adı"].values else "TL"
             st.info(f"📋 Seçilen: {d_row['Cari Adı']} -> {d_row['Malzeme Adı']} (Net Harcanan: {d_row['Net Harcanan']} {d_row['Birim']})")
             with st.form("f_depo_price_form"):
                 o_fiyat = st.number_input(f"Bu Malzeme İçin Sözleşme Birim Fiyatını Girin ({c_pb})", min_value=0.0)
@@ -170,9 +176,9 @@ with tab3:
         df_r_filtered = df_h[df_h["Cari Adı"] == r_cari]
         
         if not df_r_filtered.empty:
-            sz_b = df_c[df_c["Cari Adı"] == r_cari]["Sözleşme Bedeli"].sum()
-            pb_b = df_c[df_c["Cari Adı"] == r_cari]["Para Birimi"].values if not df_c.empty else "TL"
-            th_b = df_r_filtered["Toplam Tutar"].sum()
+            sz_b = float(df_c[df_c["Cari Adı"] == r_cari]["Sözleşme Bedeli"].sum()) if not df_c.empty else 0.0
+            pb_b = str(df_c[df_c["Cari Adı"] == r_cari]["Para Birimi"].values[0]) if not df_c.empty else "TL"
+            th_b = float(df_r_filtered["Toplam Tutar"].sum()) if not df_r_filtered.empty else 0.0
             
             st.write(f"📊 **Proje:** {r_cari} | **Sözleşme:** {sz_b:,.2f} {pb_b} | **Hakediş:** {th_b:,.2f} {pb_b} | **Kalan:** {max(sz_b-th_b, 0.0):,.2f} {pb_b}")
             st.dataframe(df_r_filtered, use_container_width=True)
@@ -218,7 +224,7 @@ with tab4:
                     pd.concat([df_c, new_cari], ignore_index=True).to_csv(FILES["cariler"], index=False)
                     st.rerun()
 
-# --- TAB 5: PERSONEL ---
+# --- TAB 5: PERSONEL (HATA KESİN OLARAK DÜZELTİLDİ u4 -> u4) ---
 with tab5:
     df_u = pd.read_csv(FILES["users"])
     st.dataframe(df_u[["İsim", "Soyisim", "Email", "Rol"]], use_container_width=True)
@@ -249,10 +255,10 @@ with tab5:
             pu1, pu2 = st.columns(2)
             pm = pu1.text_input("E-Posta")
             ps = pu2.text_input("Şifre")
-            u3, u4, u5 = st.columns(3)
+            u3, u4, u5 = st.columns(3) # Sütun isimleri u3, u4, u5 olarak sabitlendi
             pi = u3.text_input("Adı")
-            py = pu4.text_input("Soyadı")
-            pr = pu5.selectbox("Rol Seviyesi", ["Admin", "Yönetici", "Personel"])
+            py = u4.text_input("Soyadı") # Hata veren pu4 yazımı u4 olarak düzeltildi
+            pr = u5.selectbox("Rol Seviyesi", ["Admin", "Yönetici", "Personel"])
             if st.form_submit_button("👥 Kaydet", use_container_width=True):
                 new_user = pd.DataFrame([[pm, pi, py, ps, pr]], columns=df_u.columns)
                 pd.concat([df_u, new_user], ignore_index=True).to_csv(FILES["users"], index=False)
