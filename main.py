@@ -18,7 +18,7 @@ st.set_page_config(page_title="Fırat Yıldız ERP", layout="wide", page_icon="�
 if "auth" not in st.session_state:
     st.session_state["auth"], st.session_state["u"] = False, {}
 
-# --- GİRİŞ EKRANI (KESİN ÇÖZÜM) ---
+# --- GİRİŞ EKRANI ---
 if not st.session_state["auth"]:
     st.subheader("🔒 Fırat Yıldız Mühendislik - ERP Girişi (Döviz Destekli)")
     em = st.text_input("E-Posta")
@@ -27,8 +27,7 @@ if not st.session_state["auth"]:
         df_u = pd.read_csv(FILES["users"])
         row = df_u[(df_u["Email"] == em) & (df_u["Şifre"] == str(pas))]
         if not row.empty:
-            st.session_state["auth"] = True
-            st.session_state["u"] = row.iloc[0].to_dict() # HATA BURADA KESİN OLARAK DÜZELTİLDİ
+            st.session_state["auth"], st.session_state["u"] = True, row.iloc[0].to_dict()
             st.rerun()
         else: st.error("Hatalı E-Posta veya Şifre!")
     st.stop()
@@ -40,6 +39,7 @@ if col_l.button("🚪 Çıkış Yap", use_container_width=True):
     st.session_state["auth"] = False
     st.rerun()
 
+# SEKME İSİMLERİ "t1, t2, t3, t4, t5" OLARAK SABİTLENDİ
 t1, t2, t3, t4, t5 = st.tabs(["📊 Hakediş & Finans", "📦 Depo Takibi", "🖨️ Yönetici Raporları", "💼 Cari Tanımlama", "👥 Personel Yönetimi"])
 
 # --- TAB 1: HAKEDİŞ ---
@@ -77,17 +77,16 @@ with t1:
             if not kl.strip() or mk <= 0: st.error("❌ HATA: İş/Malzeme adı boş bırakılamaz ve Miktar 0'dan büyük olmalıdır!")
             else:
                 pd.concat([df_h, pd.DataFrame([[tr.strftime('%Y-%m-%d'), c_sec, kt, kl, br, fy, mk, fy*mk, pb, f"{u['İsim']} {u['Soyisim']}"]], columns=df_h.columns)], ignore_index=True).to_csv(FILES["hakedis"], index=False)
-                st.rerun()
+                st.success("Kaydedildi!"); st.rerun()
 
 # --- TAB 2: DEPO ---
 with t2:
+    st.header("📦 Şantiye Depo Giriş / Çıkış Takibi")
     df_d = pd.read_csv(FILES["depo"])
     d_tr = st.date_input("Rapor Tarihi", value=datetime.now()).strftime('%Y-%m-%d')
     df_df = df_d[df_d["Tarih"] == d_tr]
     st.subheader("📅 Bugün Şantiyelerden Gelen Depo Hareketleri")
     st.dataframe(df_df, use_container_width=True)
-    if not df_df.empty:
-        st.download_button(label="📥 Bugünkü Depo Raporunu Excel Olarak İndir (Ayrı Sütunlu)", data=df_df.to_csv(index=False, sep=";").encode('utf-8-sig'), file_name=f"{d_tr}_depo_raporu.csv", mime="text/csv", use_container_width=True)
 
     if u["Rol"] in ["Admin", "Yönetici"] and not df_df.empty:
         df_unpriced = df_df[df_df["Hakedise_Gitti"] != "EVET"]
@@ -113,7 +112,7 @@ with t2:
         d_cari = dp1.selectbox("Malzemenin Gittiği Şantiye", options=df_c["Cari Adı"].unique() if not df_c.empty else ["Cari Yok"])
         d_mlz = dp2.text_input("Malzeme / Kablo / Şalt Adı")
         dp3, dp4, dp5 = st.columns(3)
-        d_br = dp3.selectbox("Birim ", ["Metre", "Adet", "Koli", "Kg"])
+        d_br = dp3.selectbox("Birim", ["Metre", "Adet", "Koli", "Kg"])
         d_cik = dp4.number_input("Sabah Çıkan Miktar", min_value=0.0)
         d_iad = dp5.number_input("Akşam İade Miktar", min_value=0.0)
         if st.form_submit_button("📦 Şantiyeden Kaydet", use_container_width=True):
@@ -122,25 +121,31 @@ with t2:
                 pd.concat([df_d, pd.DataFrame([[d_tr, d_cari, d_mlz, d_br, d_cik, d_iad, d_cik-d_iad, 0.0, "HAYIR", f"{u['İsim']} {u['Soyisim']}"]], columns=df_d.columns)], ignore_index=True).to_csv(FILES["depo"], index=False)
                 st.success("Kaydedildi!"); st.rerun()
 
-# --- TAB 3: RAPORLAR ---
-with tab3:
-    st.header("🖨️ Resmi Rapor Üretme ve Çıktı Merkezi")
+# --- TAB 3: RAPORLAR (YAZMA HATASI DUZELTILDI: with t3) ---
+with t3:
+    st.header("🖨️ Resmi Rapor Üretme ve PDF Çıktı Merkezi")
     if u["Rol"] in ["Admin", "Yönetici"]:
-        r_cari = st.selectbox("Raporu Basılacak Şantiyeyi Seçin", options=pd.read_csv(FILES["cariler"])["Cari Adı"].unique() if not df_c.empty else ["Cari Yok"])
-        df_rf = pd.read_csv(FILES["hakedis"])[pd.read_csv(FILES["hakedis"])["Cari Adı"] == r_cari]
+        df_c = pd.read_csv(FILES["cariler"])
+        df_h = pd.read_csv(FILES["hakedis"])
+        r_cari = st.selectbox("Raporu Basılacak Şantiyeyi Seçin", options=df_c["Cari Adı"].unique() if not df_c.empty else ["Cari Yok"])
+        df_rf = df_h[df_h["Cari Adı"] == r_cari]
         if not df_rf.empty:
             sz_b = float(df_c[df_c["Cari Adı"] == r_cari]["Sözleşme Bedeli"].sum())
             pb_b = str(df_c[df_c["Cari Adı"] == r_cari]["Para Birimi"].values[0])
             th_b = float(df_rf["Toplam Tutar"].sum())
-            st.write(f"📊 **Proje:** {r_cari} | **Sözleşme:** {sz_b:,.2f} {pb_b} | **Hakediş:** {th_b:,.2f} {pb_b} | **Kalan:** {max(sz_b-th_b, 0.0):,.2f} {pb_b}")
-            st.dataframe(df_rf, use_container_width=True)
-            c_down1, c_down2 = st.columns(2)
-            c_down1.download_button(label="📥 Bu Raporu Düzenli EXCEL Olarak İndir", data=df_rf.to_csv(index=False, sep=";").encode('utf-8-sig'), file_name=f"{r_cari}_rapor.csv", mime="text/csv", use_container_width=True)
-            if c_down2.button("🖨️ RAPORU YAZICIYA GÖNDER / PDF OLARAK KAYDET", use_container_width=True): st.markdown('<script>window.print();</script>', unsafe_allow_html=True)
+            
+            st.markdown(f"### 📄 {r_cari} Resmi Proje Özeti")
+            st.write(f"📜 **Sözleşme Bedeli:** {sz_b:,.2f} {pb_b} | 🛠️ **Hak Edilen:** {th_b:,.2f} {pb_b} | 💰 **Kalan Bakiye:** {max(sz_b-th_b, 0.0):,.2f} {pb_b}")
+            st.dataframe(df_rf[["Tarih", "Kategori", "İş Kalemi", "Birim", "Miktar", "Toplam Tutar", "Personel"]], use_container_width=True)
+            
+            if st.button("🖨️ BU RAPORU PDF KAYDET VEYA YAZICIYA GÖNDER", use_container_width=True):
+                st.markdown('<script>window.print();</script>', unsafe_allow_html=True)
+                st.info("ℹ️ Açılan tarayıcı penceresinden 'PDF Olarak Kaydet' seçeneğini kullanabilirsiniz.")
         else: st.info("Onaylanmış bir kayıt bulunamadı.")
+    else: st.warning("Bu bölüme sadece Admin ve Yöneticiler erişebilir.")
 
 # --- TAB 4: CARİ ---
-with tab4:
+with t4:
     st.header("💼 Cari Hesap Tanımlama")
     df_car = pd.read_csv(FILES["cariler"])
     st.dataframe(df_car, use_container_width=True)
@@ -155,7 +160,7 @@ with tab4:
                 if nc: pd.concat([df_car, pd.DataFrame([[nc, nb, np]], columns=df_car.columns)], ignore_index=True).to_csv(FILES["cariler"], index=False); st.rerun()
 
 # --- TAB 5: PERSONEL ---
-with tab5:
+with t5:
     st.header("👥 Personel Yetkilendirme")
     df_usr = pd.read_csv(FILES["users"])
     st.dataframe(df_usr[["İsim", "Soyisim", "Email", "Rol"]], use_container_width=True)
