@@ -25,7 +25,7 @@ if "auth" not in st.session_state:
 
 # --- GİRİŞ EKRANI ---
 if not st.session_state["auth"]:
-    st.subheader("🔒 Fırat Yıldız Mühendislik - ERP Girişi (Döviz Destekli)")
+    st.subheader("🔒 Fırat Yıldız Mühendislik - ERP Girişi")
     em = st.text_input("E-Posta")
     pas = st.text_input("Şifre", type="password")
     if st.button("Giriş Yap", use_container_width=True):
@@ -33,10 +33,9 @@ if not st.session_state["auth"]:
         row = df[(df["Email"] == em) & (df["Şifre"] == str(pas))]
         if not row.empty:
             st.session_state["auth"] = True
-            st.session_state["u"] = row.iloc[0].to_dict()
+            st.session_state["u"] = row.iloc.to_dict()
             st.rerun()
-        else:
-            st.error("Hatalı Giriş!")
+        else: st.error("Hatalı Giriş!")
     st.stop()
 
 u = st.session_state["u"]
@@ -55,7 +54,7 @@ with tab1:
     df_h = pd.read_csv(FILES["hakedis"])
     cari_secim = st.selectbox("Raporlanacak Cari / İş Seçin", options=df_c["Cari Adı"].unique() if not df_c.empty else ["Cari Yok"])
     df_hf = df_h[df_h["Cari Adı"] == cari_secim]
-    pb = df_c[df_c["Cari Adı"] == cari_secim]["Para Birimi"].values[0] if (not df_c.empty and cari_secim in df_c["Cari Adı"].values) else "TL"
+    pb = df_c[df_c["Cari Adı"] == cari_secim]["Para Birimi"].values if (not df_c.empty and cari_secim in df_c["Cari Adı"].values) else "TL"
     
     if u["Rol"] in ["Admin", "Yönetici"]:
         sz = df_c[df_c["Cari Adı"] == cari_secim]["Sözleşme Bedeli"].sum()
@@ -98,9 +97,12 @@ with tab1:
         fy = h5.number_input("Birim Fiyat", min_value=0.0)
         mk = h6.number_input("Miktar", min_value=0.0)
         if st.form_submit_button("💾 Manuel Hakediş Kaydet", use_container_width=True):
-            new_row = pd.DataFrame([[tr.strftime('%Y-%m-%d'), cari_secim, kt, kl, br, fy, mk, fy*mk, pb, f"{u['İsim']} {u['Soyisim']}"]], columns=df_h.columns)
-            pd.concat([df_h, new_row], ignore_index=True).to_csv(FILES["hakedis"], index=False)
-            st.rerun()
+            if not kl.strip() or mk <= 0:
+                st.error("❌ HATA: İş/Malzeme adı boş bırakılamaz ve Miktar 0'dan büyük olmalıdır!")
+            else:
+                new_row = pd.DataFrame([[tr.strftime('%Y-%m-%d'), cari_secim, kt, kl, br, fy, mk, fy*mk, pb, f"{u['İsim']} {u['Soyisim']}"]], columns=df_h.columns)
+                pd.concat([df_h, new_row], ignore_index=True).to_csv(FILES["hakedis"], index=False)
+                st.rerun()
 # --- TAB 2: DEPO ---
 with tab2:
     df_d = pd.read_csv(FILES["depo"])
@@ -110,13 +112,18 @@ with tab2:
     st.subheader("📅 Bugün Şantiyelerden Gelen Depo Hareketleri")
     st.dataframe(df_df, use_container_width=True)
 
+    # 📥 EXCEL AYRI SÜTUN DÜZELTMESİ (sep=";" eklendi)
+    if not df_df.empty:
+        csv_depo_data = df_df.to_csv(index=False, sep=";").encode('utf-8-sig')
+        st.download_button(label="📥 Bugünkü Depo Raporunu Excel Olarak İndir (Ayrı Sütunlu)", data=csv_depo_data, file_name=f"{d_tr}_gunluk_depo_raporu.csv", mime="text/csv", use_container_width=True)
+
     if u["Rol"] in ["Admin", "Yönetici"] and not df_df.empty:
-        st.markdown("### 💰 Ofis Depo Fiyatlandırma ve Hakedişe Gönderme Paneli")
+        st.markdown("### 💰 Ofis Depo Fiyatlandırma Paneli")
         df_unpriced = df_df[df_df["Hakedise_Gitti"] != "EVET"]
         if not df_unpriced.empty:
             idx_d = st.selectbox("Fiyatlandırılacak Şantiye Depo Satır Numarasını Seçin:", df_unpriced.index.tolist())
             d_row = df_d.loc[idx_d]
-            c_pb = df_c[df_c["Cari Adı"] == d_row["Cari Adı"]]["Para Birimi"].values[0] if d_row["Cari Adı"] in df_c["Cari Adı"].values else "TL"
+            c_pb = df_c[df_c["Cari Adı"] == d_row["Cari Adı"]]["Para Birimi"].values if d_row["Cari Adı"] in df_c["Cari Adı"].values else "TL"
             st.info(f"📋 Seçilen: {d_row['Cari Adı']} -> {d_row['Malzeme Adı']} (Net Harcanan: {d_row['Net Harcanan']} {d_row['Birim']})")
             with st.form("f_depo_price_form"):
                 o_fiyat = st.number_input(f"Bu Malzeme İçin Sözleşme Birim Fiyatını Girin ({c_pb})", min_value=0.0)
@@ -142,17 +149,20 @@ with tab2:
         d_mlz = dp2.text_input("Malzeme / Kablo / Şalt Adı")
         dp3, dp4, dp5 = st.columns(3)
         d_br = dp3.selectbox("Birim ", ["Metre", "Adet", "Koli", "Kg"])
-        d_cik = dp4.number_input("Sabah Depodan Çıkan Miktar", min_value=0.0)
-        d_iad = dp5.number_input("Akşam Depoya İade Edilen Miktar", min_value=0.0)
+        d_cikis_val = dp4.number_input("Sabah Depodan Çıkan Miktar", min_value=0.0)
+        d_iade_val = dp5.number_input("Akşam Depoya İade Edilen Miktar", min_value=0.0)
         if st.form_submit_button("📦 Depo Hareketini Şantiyeden Kaydet", use_container_width=True):
-            new_depo = pd.DataFrame([[d_tr, d_cari, d_mlz, d_br, d_cik, d_iad, d_cik-d_iad, 0.0, "HAYIR", f"{u['İsim']} {u['Soyisim']}"]], columns=df_d.columns)
-            pd.concat([df_d, new_depo], ignore_index=True).to_csv(FILES["depo"], index=False)
-            st.success("Depo hareketi başarıyla şantiyeden kaydedildi, ofis onayına düştü!")
-            st.rerun()
+            if not d_mlz.strip() or d_cikis_val <= 0:
+                st.error("❌ HATA: Malzeme adı boş bırakılamaz ve Sabah Çıkan Miktar 0'dan büyük olmalıdır!")
+            else:
+                new_depo = pd.DataFrame([[d_tr, d_cari, d_mlz, d_br, d_cikis_val, d_iade_val, d_cikis_val-d_iade_val, 0.0, "HAYIR", f"{u['İsim']} {u['Soyisim']}"]], columns=df_d.columns)
+                pd.concat([df_d, new_depo], ignore_index=True).to_csv(FILES["depo"], index=False)
+                st.success("Depo hareketi başarıyla şantiyeden kaydedildi, ofis onayına düştü!")
+                st.rerun()
 
 # --- TAB 3: YÖNETİCİ RAPORLARI ---
 with tab3:
-    st.header("🖨️ Resmi Rapor Üretme ve Yazdırma Merkezi")
+    st.header("🖨️ Resmi Rapor Üretme, Excel ve PDF Çıktı Merkezi")
     if u["Rol"] in ["Admin", "Yönetici"]:
         df_c = pd.read_csv(FILES["cariler"])
         df_h = pd.read_csv(FILES["hakedis"])
@@ -161,19 +171,19 @@ with tab3:
         
         if not df_r_filtered.empty:
             sz_b = df_c[df_c["Cari Adı"] == r_cari]["Sözleşme Bedeli"].sum()
-            pb_b = df_c[df_c["Cari Adı"] == r_cari]["Para Birimi"].values[0]
+            pb_b = df_c[df_c["Cari Adı"] == r_cari]["Para Birimi"].values if not df_c.empty else "TL"
             th_b = df_r_filtered["Toplam Tutar"].sum()
             
             st.write(f"📊 **Proje:** {r_cari} | **Sözleşme:** {sz_b:,.2f} {pb_b} | **Hakediş:** {th_b:,.2f} {pb_b} | **Kalan:** {max(sz_b-th_b, 0.0):,.2f} {pb_b}")
-            st.dataframe(df_r_filtered[["Tarih", "Kategori", "İş Kalemi", "Birim", "Miktar", "Toplam Tutar"]], use_container_width=True)
+            st.dataframe(df_r_filtered, use_container_width=True)
             
-            csv_data = df_r_filtered.to_csv(index=False).encode('utf-8')
+            # 📥 EXCEL AYRI SÜTUN DÜZELTMESİ (sep=";" eklendi)
+            csv_data = df_r_filtered.to_csv(index=False, sep=";").encode('utf-8-sig')
             c_down1, c_down2 = st.columns(2)
-            c_down1.download_button(label="📥 Bu Raporu EXCEL Olarak Bilgisayara İndir", data=csv_data, file_name=f"{r_cari}_resmi_rapor.csv", mime="text/csv", use_container_width=True)
+            c_down1.download_button(label="📥 Bu Raporu Düzenli EXCEL Olarak Bilgisayara İndir", data=csv_data, file_name=f"{r_cari}_resmi_rapor.csv", mime="text/csv", use_container_width=True)
             
-            if c_down2.button("🖨️ BU RAPORU DOĞRUDAN YAZDIR VEYA PDF KAYDET", use_container_width=True):
+            if c_down2.button("🖨️ RAPORU YAZICIYA GÖNDER / PDF OLARAK KAYDET", use_container_width=True):
                 st.markdown('<script>window.print();</script>', unsafe_allow_html=True)
-                st.info("ℹ️ Açılan pencereden 'PDF Olarak Kaydet' seçeneğini kullanabilirsiniz.")
         else: st.info("Bu projeye ait onaylanmış bir kayıt bulunamadı.")
     else: st.warning("Bu bölüme sadece Admin ve Yöneticiler erişebilir.")
 # --- TAB 4: CARİ ---
@@ -240,8 +250,8 @@ with tab5:
             pu1, pu2 = st.columns(2)
             pm = pu1.text_input("E-Posta")
             ps = pu2.text_input("Şifre")
-            pu3, pu4, pu5 = st.columns(3)
-            pi = pu3.text_input("Adı")
+            u3, u4, u5 = st.columns(3)
+            pi = u3.text_input("Adı")
             py = pu4.text_input("Soyadı")
             pr = pu5.selectbox("Rol Seviyesi", ["Admin", "Yönetici", "Personel"])
             if st.form_submit_button("👥 Kaydet", use_container_width=True):
