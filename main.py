@@ -15,7 +15,7 @@ for f, path in FILES.items():
         elif f == "hakedis":
             pd.DataFrame(columns=["Tarih", "Cari Adı", "Kategori", "İş Kalemi", "Birim", "Birim Fiyat", "Miktar", "Toplam Tutar", "Para Birimi", "Personel"]).to_csv(path, index=False)
         elif f == "depo":
-            pd.DataFrame(columns=["Tarih", "Cari Adı", "Malzeme Adı", "Birim", "Sabah Çıkan", "Akşam İade", "Net Harcanan", "Personel"]).to_csv(path, index=False)
+            pd.DataFrame(columns=["Tarih", "Cari Adı", "Malzeme Adı", "Birim", "Sabah Çıkan", "Akşam İade", "Net Harcanan", "Birim Fiyat", "Hakedise_Gitti", "Personel"]).to_csv(path, index=False)
 
 st.set_page_config(page_title="Fırat Yıldız ERP", layout="wide", page_icon="⚡")
 
@@ -61,10 +61,10 @@ with t1:
         th = df_hf["Toplam Tutar"].sum()
         m1, m2, m3 = st.columns(3)
         m1.metric("Sözleşme Bedeli", f"{sz:,.2f} {pb}")
-        m2.metric("Hak Edilen Tutar", f"{th:,.2f} {pb}")
+        m2.metric("Hak Edilen Tutar (Canlı)", f"{th:,.2f} {pb}")
         m3.metric("Kalan Bakiye", f"{max(sz-th, 0.0):,.2f} {pb}")
 
-    st.subheader("📋 Hakediş Tablosu")
+    st.subheader("📋 Güncel Hakediş Tablosu")
     st.dataframe(df_hf if u["Rol"] in ["Admin", "Yönetici"] else df_hf[["Tarih", "Cari Adı", "Kategori", "İş Kalemi", "Birim", "Miktar", "Para Birimi", "Personel"]], use_container_width=True)
 
     if u["Rol"] == "Admin" and not df_hf.empty:
@@ -87,7 +87,7 @@ with t1:
                 st.rerun()
 
     with st.form("f_h_add", clear_on_submit=True):
-        st.subheader("➕ Yeni Giriş")
+        st.subheader("➕ El İle Manuel İmalat Girişi")
         h1, h2, h3 = st.columns(3)
         tr = h1.date_input("Tarih")
         kt = h2.selectbox("Kategori", ["Kuvvetli Akım", "Zayıf Akım", "Aydınlatma"])
@@ -96,50 +96,80 @@ with t1:
         br = h4.selectbox("Birim", ["Metre", "Adet", "Takım", "Lot"])
         fy = h5.number_input("Birim Fiyat", min_value=0.0)
         mk = h6.number_input("Miktar", min_value=0.0)
-        if st.form_submit_button("💾 Kaydet", use_container_width=True):
+        if st.form_submit_button("💾 Manuel Hakediş Kaydet", use_container_width=True):
             new_row = pd.DataFrame([[tr.strftime('%Y-%m-%d'), c_sec, kt, kl, br, fy, mk, fy*mk, pb, f"{u['İsim']} {u['Soyisim']}"]], columns=df_h.columns)
             pd.concat([df_h, new_row], ignore_index=True).to_csv(FILES["hakedis"], index=False)
             st.rerun()
-
-# --- TAB 2: DEPO ---
+            # --- TAB 2: DEPO ---
 with t2:
     df_d = pd.read_csv(FILES["depo"])
+    df_c = pd.read_csv(FILES["cariler"])
     d_tr = st.date_input("Rapor Tarihi", value=datetime.now()).strftime('%Y-%m-%d')
     df_df = df_d[df_d["Tarih"] == d_tr]
+    st.subheader("📅 Bugün Şantiyelerden Gelen Depo Hareketleri")
     st.dataframe(df_df, use_container_width=True)
 
-    if u["Rol"] == "Admin" and not df_df.empty:
-        st.subheader("🛠️ Depo Kaydı Düzenleme / Silme")
-        idx_d = st.selectbox("Satır No Seçin (Depo)", df_df.index.tolist())
-        with st.form("f_d_edit"):
-            fd_malz = st.text_input("Malzeme", value=df_d.loc[idx_d, "Malzeme Adı"])
-            fd_c = st.number_input("Sabah Çıkan", value=float(df_d.loc[idx_d, "Sabah Çıkan"]))
-            fd_i = st.number_input("Akşam İade", value=float(df_d.loc[idx_d, "Akşam İade"]))
-            bd1, bd2 = st.columns(2)
-            if bd1.form_submit_button("🔄 Güncelle", use_container_width=True):
-                df_d.at[idx_d, "Malzeme Adı"] = fd_malz
-                df_d.at[idx_d, "Sabah Çıkan"] = fd_c
-                df_d.at[idx_d, "Akşam İade"] = fd_i
-                df_d.at[idx_d, "Net Harcanan"] = fd_c - fd_i
-                df_d.to_csv(FILES["depo"], index=False)
-                st.rerun()
-            if bd2.form_submit_button("🚨 Sil", use_container_width=True):
-                df_d.drop(idx_d).reset_index(drop=True).to_csv(FILES["depo"], index=False)
-                st.rerun()
+    # 🔗 OFİS FİYATLANDIRMA PANELİ (Sadece Admin ve Yönetici Görebilir)
+    if u["Rol"] in ["Admin", "Yönetici"] and not df_df.empty:
+        st.markdown("### 💰 Ofis Depo Fiyatlandırma ve Hakedişe Gönderme Paneli")
+        # Sadece hakedişe henüz gönderilmemiş ham depo kayıtlarını listele
+        df_unpriced = df_df[df_df["Hakedise_Gitti"] != "EVET"]
+        
+        if not df_unpriced.empty:
+            idx_d = st.selectbox("Fiyatlandırılacak Şantiye Depo Satır Numarasını Seçin:", df_unpriced.index.tolist())
+            d_row = df_d.loc[idx_d]
+            
+            # Seçilen şantiyenin para birimini carilerden bul
+            c_pb = df_c[df_c["Cari Adı"] == d_row["Cari Adı"]]["Para Birimi"].values[0] if d_row["Cari Adı"] in df_c["Cari Adı"].values else "TL"
+            
+            st.info(f"📋 Seçilen: {d_row['Cari Adı']} -> {d_row['Malzeme Adı']} (Net Harcanan: {d_row['Net Harcanan']} {d_row['Birim']})")
+            
+            with st.form("f_depo_price_form"):
+                o_fiyat = st.number_input(f"Bu Malzeme İçin Sözleşme Birim Fiyatını Girin ({c_pb})", min_value=0.0)
+                o_kat = st.selectbox("Hakediş Kategorisi", ["Kuvvetli Akım", "Zayıf Akım", "Aydınlatma"])
+                
+                if st.form_submit_button("⚡ Fiyatlandır ve Hakediş Tablosuna Gönder", use_container_width=True):
+                    if o_fiyat > 0:
+                        # 1. Depo tablosunda fiyatı ve durumu güncelle
+                        df_d.at[idx_d, "Birim Fiyat"] = o_fiyat
+                        df_d.at[idx_d, "Hakedise_Gitti"] = "EVET"
+                        df_d.to_csv(FILES["depo"], index=False)
+                        
+                        # 2. Hakediş (Finans) tablosuna otomatik satır ekle
+                        df_h = pd.read_csv(FILES["hakedis"])
+                        net_m = float(d_row["Net Harcanan"])
+                        tot_t = net_m * o_fiyat
+                        p_isim = f"{u['İsim']} {u['Soyisim']} (Ofis Onaylı)"
+                        
+                        auto_hakedis_row = pd.DataFrame([[d_tr, d_row["Cari Adı"], o_kat, f"[DEPO] {d_row['Malzeme Adı']}", d_row["Birim"], o_fiyat, net_m, tot_t, c_pb, p_isim]], columns=df_h.columns)
+                        pd.concat([df_h, auto_hakedis_row], ignore_index=True).to_csv(FILES["hakedis"], index=False)
+                        
+                        st.success("Malzeme başarıyla bütçelendirildi ve Hakediş sekmesine aktarıldı!")
+                        st.rerun()
+                    else:
+                        st.error("Lütfen 0'dan büyük bir birim fiyat girin!")
+        else:
+            st.success("🎉 Bugünkü tüm depo hareketleri ofis tarafından başarıyla fiyatlandırılmış ve hakedişe gönderilmiş!")
 
+    # Yeni Hareket Ekleme Formu (Personel Fiyat göremez)
     with st.form("f_d_add", clear_on_submit=True):
-        st.subheader("📥 Yeni Hareket")
+        st.subheader("📥 Şantiye Personeli Malzeme Çıkış / İade Formu")
         dp1, dp2 = st.columns(2)
-        d_cari = dp1.selectbox("Şantiye", options=df_c["Cari Adı"].unique() if not df_c.empty else ["Cari Yok"])
-        d_mlz = dp2.text_input("Malzeme")
+        d_cari = dp1.selectbox("Malzemenin Gittiği Şantiye", options=df_c["Cari Adı"].unique() if not df_c.empty else ["Cari Yok"])
+        d_mlz = dp2.text_input("Malzeme / Kablo / Şalt Adı")
         dp3, dp4, dp5 = st.columns(3)
         d_br = dp3.selectbox("Birim ", ["Metre", "Adet", "Koli", "Kg"])
-        d_cik = dp4.number_input("Sabah Çıkan", min_value=0.0)
-        d_iad = dp5.number_input("Akşam İade", min_value=0.0)
-        if st.form_submit_button("📦 Kaydet", use_container_width=True):
-            new_depo = pd.DataFrame([[d_tr, d_cari, d_mlz, d_br, d_cik, d_iad, d_cik-d_iad, f"{u['İsim']} {u['Soyisim']}"]], columns=df_d.columns)
+        d_cik = dp4.number_input("Sabah Depodan Çıkan Miktar", min_value=0.0)
+        d_iad = dp5.number_input("Akşam Depoya İade Edilen Miktar", min_value=0.0)
+        
+        if st.form_submit_button("📦 Depo Hareketini Şantiyeden Kaydet", use_container_width=True):
+            net_h = d_cik - d_iad
+            # Yeni eklenen teknik sütunlar varsayılan olarak boş ve HAYIR gider
+            new_depo = pd.DataFrame([[d_tr, d_cari, d_mlz, d_br, d_cik, d_iad, net_h, 0.0, "HAYIR", f"{u['İsim']} {u['Soyisim']}"]], columns=df_d.columns)
             pd.concat([df_d, new_depo], ignore_index=True).to_csv(FILES["depo"], index=False)
+            st.success("Depo hareketi başarıyla şantiyeden kaydedildi, ofis onayına düştü!")
             st.rerun()
+
 # --- TAB 3: CARİ ---
 with t3:
     df_c = pd.read_csv(FILES["cariler"])
@@ -216,3 +246,4 @@ with t4:
                 new_user = pd.DataFrame([[pm, pi, py, ps, pr]], columns=df_u.columns)
                 pd.concat([df_u, new_user], ignore_index=True).to_csv(FILES["users"], index=False)
                 st.rerun()
+
