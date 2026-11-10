@@ -10,42 +10,27 @@ st.set_page_config(page_title="Fırat Yıldız ERP", page_icon="🏗️", layout
 # 🖥️ Tüm Uygulamayı Kapsayan Premium Kurumsal CSS Düzenlemeleri
 st.markdown("""
     <style>
-    /* Tüm uygulamanın arka planını kurumsal koyu ton yapmak */
-    .stApp {
-        background-color: #0b0f19 !important;
-    }
-    
-    /* Ana başlıklar */
+    .stApp { background-color: #0b0f19 !important; }
     h1, h2, h3, h4, h5, h6, .login-title {
         color: #ef4444 !important; /* Kurumsal Kırmızı */
         font-family: 'Segoe UI', sans-serif;
         font-weight: 700 !important;
     }
-    
-    /* İkincil yazılar ve alt başlıklar */
-    .login-subtitle, p, span, label, .stMarkdown {
-        color: #e5e7eb !important; /* Açık Gri / Beyaz Tonu */
-    }
-
-    /* Giriş Formu ve Veri Kartları Tasarımı */
+    .login-subtitle, p, span, label, .stMarkdown { color: #e5e7eb !important; }
     div[data-testid="stForm"], div[data-testid="metric-container"], .stAlert {
         border: 1px solid #1f2937 !important; 
         border-top: 4px solid #2563eb !important; /* Kurumsal Mavi Üst Çizgi */
         border-radius: 8px !important;
         padding: 20px !important;
-        background-color: #111827 !important; /* Koyu Gri Kutu Arka Planı */
+        background-color: #111827 !important;
     }
-    
-    /* Veri tablosu (Dataframe) düzenlemeleri */
     div[data-testid="stDataFrame"] {
         background-color: #111827 !important;
         border: 1px solid #1f2937 !important;
         border-radius: 8px !important;
     }
-
-    /* Form ve Giriş Butonları */
     button[kind="primaryFormSubmit"], .stButton > button {
-        background-color: #2563eb !important; /* Kurumsal Mavi */
+        background-color: #2563eb !important;
         color: white !important;
         border-radius: 6px !important;
         width: 100% !important;
@@ -53,13 +38,11 @@ st.markdown("""
         border: none !important;
     }
     button[kind="primaryFormSubmit"]:hover, .stButton > button:hover {
-        background-color: #ef4444 !important; /* Üzerine gelince Kırmızı */
+        background-color: #ef4444 !important;
         color: white !important;
     }
-    
-    /* Sol menü (Sidebar) özelleştirmesi */
     section[data-testid="stSidebar"] {
-        background-color: #0f172a !important; /* Çok Koyu Mavi/Siyah */
+        background-color: #0f172a !important;
         border-right: 1px solid #1e293b !important;
     }
     </style>
@@ -85,8 +68,7 @@ def kullanici_ekle(eposta, sifre, rol):
         df_users = pd.read_csv(USERS_FILE)
     else:
         df_users = pd.DataFrame(columns=["eposta", "sifre", "rol"])
-    if eposta in df_users["eposta"].values:
-        return False
+    if eposta in df_users["eposta"].values: return False
     yeni_user = pd.DataFrame([{"eposta": eposta, "sifre": sifre, "rol": rol}])
     df_users = pd.concat([df_users, yeni_user], ignore_index=True)
     df_users.to_csv(USERS_FILE, index=False)
@@ -95,11 +77,18 @@ def kullanici_ekle(eposta, sifre, rol):
 def veri_yukle():
     if os.path.exists(DB_FILE):
         df_loaded = pd.read_csv(DB_FILE)
-        for col, default_val in [("Fatura Durumu", "Faturalanmadı"), ("Yönetici Onayı", "Beklemede")]:
+        # KDV ve yeni sütunların geriye dönük uyumluluk kontrolü
+        for col, default_val in [("Fatura Durumu", "Faturalanmadı"), ("Yönetici Onayı", "Beklemede"), 
+                                 ("KDV Oranı (%)", 20), ("KDV Tutarı", 0), ("KDV Dahil Toplam", 0)]:
             if col not in df_loaded.columns:
-                df_loaded[col] = default_val
+                if col == "KDV Dahil Toplam" and "Tutar" in df_loaded.columns:
+                    df_loaded[col] = df_loaded["Tutar"] * 1.20
+                elif col == "KDV Tutarı" and "Tutar" in df_loaded.columns:
+                    df_loaded[col] = df_loaded["Tutar"] * 0.20
+                else:
+                    df_loaded[col] = default_val
         return df_loaded
-    return pd.DataFrame(columns=["Tarih", "Tür", "Proje Adı", "Müşteri/Kurum", "Tutar", "Para Birimi", "Durum", "Fatura Durumu", "Yönetici Onayı"])
+    return pd.DataFrame(columns=["Tarih", "Tür", "Proje Adı", "Müşteri/Kurum", "Tutar", "KDV Oranı (%)", "KDV Tutarı", "KDV Dahil Toplam", "Para Birimi", "Durum", "Fatura Durumu", "Yönetici Onayı"])
 
 def veri_kaydet(df):
     df.to_csv(DB_FILE, index=False, encoding="utf-8-sig")
@@ -112,18 +101,15 @@ if "giris_yapildi" not in st.session_state:
     st.session_state.kullanici_adi = ""
     st.session_state.kullanici_rolu = ""
 
-# ---------------- 🔑 GİRİŞ EKRANI ----------------
 if not st.session_state.giris_yapildi:
     st.markdown("<h1 class='login-title' style='text-align: center;'>FIRAT YILDIZ MÜHENDİSLİK</h1>", unsafe_allow_html=True)
     st.markdown("<p class='login-subtitle' style='text-align: center;'>Kurumsal ERP & Finansal Kontrol Paneli</p>", unsafe_allow_html=True)
-    
-    _, col_login, _ = st.columns([1, 2, 1])
+    _, col_login, _ = st.columns(2)
     with col_login:
         with st.form("giris_formu"):
             k_adi = st.text_input("Kurumsal E-Posta Adresi", placeholder="ornek@firma.com")
             sifre = st.text_input("Erişim Şifresi", type="password")
             giri_butonu = st.form_submit_button("Sisteme Güvenli Giriş Yap")
-            
             if giri_butonu:
                 KULLANICILAR = kullanicilari_yukle()
                 if k_adi in KULLANICILAR and str(KULLANICILAR[k_adi]["sifre"]) == str(sifre):
@@ -132,10 +118,8 @@ if not st.session_state.giris_yapildi:
                     st.session_state.kullanici_rolu = KULLANICILAR[k_adi]["rol"]
                     st.success("Giriş Başarılı!")
                     st.rerun()
-                else:
-                    st.error("Hatalı e-posta veya şifre!")
+                else: st.error("Hatalı e-posta veya şifre!")
 else:
-    # ---------------- 📱 SOL MENÜ (SIDEBAR) ----------------
     with st.sidebar:
         st.markdown("<h2 style='color: #ef4444; margin-bottom: 0;'>Fırat Yıldız</h2>", unsafe_allow_html=True)
         st.markdown("<p style='color: #9ca3af; margin-top: 0;'>Mühendislik & ERP Kontrol</p>", unsafe_allow_html=True)
@@ -149,66 +133,59 @@ else:
             
         sayfa = st.radio("Navigasyon Menüsü", menü, index=0)
         st.divider()
-        
         if st.button("🚪 Güvenli Çıkış Yap"):
             st.session_state.giris_yapildi = False
             st.rerun()
 
-    # ---------------- 1. SAYFA: DASHBOARD ----------------
     if sayfa == "📊 Genel Durum (Dashboard)":
-        st.markdown("<h3>📊 Finansal Durum Özetleri</h3>", unsafe_allow_html=True)
+        st.markdown("<h3>📊 Finansal Durum Özetleri (KDV Dahil)</h3>", unsafe_allow_html=True)
         
         if not df.empty:
             pb_listesi = df["Para Birimi"].unique()
             for pb in pb_listesi:
-                st.markdown(f"<h4 style='color: #2563eb !important;'>🌐 {pb} Bazında Sözleşme Detayları</h4>", unsafe_allow_html=True)
+                st.markdown(f"<h4 style='color: #2563eb !important;'>🌐 {pb} Bazında Finansal Kırılımlar</h4>", unsafe_allow_html=True)
                 df_pb = df[df["Para Birimi"] == pb]
                 
-                t_toplam = df_pb[df_pb["Tür"] == "Teklif"]["Tutar"].sum()
-                h_toplam = df_pb[df_pb["Tür"] == "Hakediş"]["Tutar"].sum()
+                t_matrah = df_pb[df_pb["Tür"] == "Teklif"]["Tutar"].sum()
+                t_kdv_dahil = df_pb[df_pb["Tür"] == "Teklif"]["KDV Dahil Toplam"].sum()
                 
-                t_onay = df_pb[(df_pb["Tür"] == "Teklif") & (df_pb["Yönetici Onayı"] == "Onaylandı")]["Tutar"].sum()
-                h_fatura = df_pb[(df_pb["Tür"] == "Hakediş") & (df_pb["Fatura Durumu"] == "Faturalandı")]["Tutar"].sum()
+                h_matrah = df_pb[df_pb["Tür"] == "Hakediş"]["Tutar"].sum()
+                h_kdv_dahil = df_pb[df_pb["Tür"] == "Hakediş"]["KDV Dahil Toplam"].sum()
+                
+                t_onay_kdvli = df_pb[(df_pb["Tür"] == "Teklif") & (df_pb["Yönetici Onayı"] == "Onaylandı")]["KDV Dahil Toplam"].sum()
+                h_fatura_kdvli = df_pb[(df_pb["Tür"] == "Hakediş") & (df_pb["Fatura Durumu"] == "Faturalandı")]["KDV Dahil Toplam"].sum()
                 
                 m1, m2, m3, m4 = st.columns(4)
                 sym = CURRENCY_SYMBOLS.get(pb, "")
-                m1.metric("Toplam Teklif", f"{t_toplam:,.2f} {sym}")
-                m2.metric("Yönetici Onaylı Teklif", f"{t_onay:,.2f} {sym}", f"{((t_onay/t_toplam*100) if t_toplam>0 else 0):.1f}% Onaylı")
-                m3.metric("Toplam Hakediş", f"{h_toplam:,.2f} {sym}")
-                m4.metric("Faturalanan Hakediş", f"{h_fatura:,.2f} {sym}", f"{h_toplam - h_fatura:,.2f} Kalan")
+                m1.metric("Toplam Teklif (KDV'li)", f"{t_kdv_dahil:,.2f} {sym}", f"Matrah: {t_matrah:,.2f} {sym}")
+                m2.metric("Onaylı Teklif (KDV'li)", f"{t_onay_kdvli:,.2f} {sym}")
+                m3.metric("Toplam Hakediş (KDV'li)", f"{h_kdv_dahil:,.2f} {sym}", f"Matrah: {h_matrah:,.2f} {sym}")
+                m4.metric("Faturalanan Hakediş (KDV'li)", f"{h_fatura_kdvli:,.2f} {sym}", f"Kalan: {(h_kdv_dahil - h_fatura_kdvli):,.2f} {sym}")
                 st.divider()
         else:
-            st.markdown("<div style='background-color: #111827; padding: 15px; border-left: 5px solid #2563eb; color: #e5e7eb;'>Sistemde henüz kayıtlı veri bulunmuyor. Yeni Kayıt Ekle sekmesinden başlayabilirsiniz.</div>", unsafe_allow_html=True)
+            st.markdown("<div style='background-color: #111827; padding: 15px; border-left: 5px solid #2563eb; color: #e5e7eb;'>Sistemde henüz kayıtlı veri bulunmuyor.</div>", unsafe_allow_html=True)
 
         st.markdown("<h3>📋 Güncel İşlem Kayıtları Tablosu</h3>", unsafe_allow_html=True)
         st.dataframe(df.sort_index(ascending=False), use_container_width=True)
 
-    # ---------------- 2. SAYFA: KURUMSAL RAPORLAMA ----------------
     elif sayfa == "📈 Kurumsal Raporlama":
         st.markdown("<h3>📈 Kurumsal Analiz ve Finansal Grafikler</h3>", unsafe_allow_html=True)
-        
-        if df.empty:
-            st.info("Raporlama yapabilmek için lütfen önce veri ekleyin.")
+        if df.empty: st.info("Raporlama yapabilmek için lütfen önce veri ekleyin.")
         else:
             c_grafik, c_filtre = st.columns(2)
             with c_filtre:
                 st.markdown("#### 🎯 Rapor Filtreleri")
                 f_pb = st.selectbox("Raporlanacak Para Birimi", ["TL", "USD", "EUR", "STG"])
                 f_tur = st.multiselect("İşlem Türü", ["Teklif", "Hakediş"], default=["Teklif", "Hakediş"])
-            
             df_filtreli = df[(df["Para Birimi"] == f_pb) & (df["Tür"].isin(f_tur))]
-            
             with c_grafik:
                 if not df_filtreli.empty:
-                    st.markdown(f"##### {f_pb} Cinsinden Tür ve Fatura Durumu Dağılımı")
-                    grafik_data = df_filtreli.groupby(["Tür", "Fatura Durumu"])["Tutar"].sum().unstack().fillna(0)
+                    st.markdown(f"##### {f_pb} Cinsinden Tür ve KDV Dahil Toplam Dağılımı")
+                    grafik_data = df_filtreli.groupby(["Tür", "Fatura Durumu"])["KDV Dahil Toplam"].sum().unstack().fillna(0)
                     st.bar_chart(grafik_data)
-                else:
-                    st.caption("Seçilen para birimi ve filtrelere uygun veri bulunamadı.")
-    # ---------------- 3. SAYFA: YENİ KAYIT EKLE (Yönetici) ----------------
+                else: st.caption("Seçilen filtrelere uygun veri bulunamadı.")
     elif sayfa == "➕ Yeni Kayıt Ekle" and st.session_state.kullanici_rolu == "Yönetici":
-        st.markdown("<h3>➕ Yeni Teklif / Hakediş Kontrat Girişi</h3>", unsafe_allow_html=True)
-        
+        st.markdown("<h3>➕ Yeni Teklif / Hakediş Kontrat Girişi (KDV Hesaplamalı)</h3>", unsafe_allow_html=True)
         with st.form("kurumsal_islem_formu", clear_on_submit=True):
             col_f1, col_f2 = st.columns(2)
             with col_f1:
@@ -216,116 +193,92 @@ else:
                 proje_adi = st.text_input("Proje / İş Başlığı")
                 musteri = st.text_input("Müşteri Firma / Kurum")
             with col_f2:
-                tutar = st.number_input("Sözleşme Tutarı", min_value=0.0, format="%.2f")
+                tutar = st.number_input("Sözleşme Matrah Tutarı (KDV Hariç)", min_value=0.0, format="%.2f")
+                kdv_orani = st.selectbox("KDV Oranı (%)", [0, 1, 10, 20], index=3)
                 para_birimi = st.selectbox("Para Birimi", ["TL", "USD", "EUR", "STG"])
                 durum = st.selectbox("Mevcut İş Durumu", ["Beklemede", "Onaylandı", "Reddedildi", "Ödendi / Tahsil Edildi"])
-            
             st.divider()
             col_f3, col_f4 = st.columns(2)
-            with col_f3:
-                fatura_durumu = st.selectbox("Fatura Durumu", ["Faturalanmadı", "Faturalandı"])
-            with col_f4:
-                yonetici_onayi = st.selectbox("Yönetici İlk Onay Durumu", ["Beklemede", "Onaylandı", "Reddedildi"])
-                
-            submit_btn = st.form_submit_button("Sözleşmeyi Onayla, Kaydet ve Yedekle")
+            with col_f3: fatura_durumu = st.selectbox("Fatura Durumu", ["Faturalanmadı", "Faturalandı"])
+            with col_f4: yonetici_onayi = st.selectbox("Yönetici İlk Onay Durumu", ["Beklemede", "Onaylandı", "Reddedildi"])
             
+            submit_btn = st.form_submit_button("Sözleşmeyi Onayla, Otomatik KDV Hesapla ve Yedekle")
             if submit_btn:
-                if not proje_adi or not musteri:
-                    st.error("Lütfen kurumsal alanları boş bırakmayınız!")
+                if not proje_adi or not musteri: st.error("Lütfen kurumsal alanları boş bırakmayınız!")
                 else:
+                    kdv_tutari = tutar * (kdv_orani / 100)
+                    kdv_dahil_toplam = tutar + kdv_tutari
                     yeni_satir = {
-                        "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                        "Tür": tur, "Proje Adı": proje_adi, "Müşteri/Kurum": musteri,
-                        "Tutar": tutar, "Para Birimi": para_birimi, "Durum": durum,
+                        "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M"), "Tür": tur, "Proje Adı": proje_adi, 
+                        "Müşteri/Kurum": musteri, "Tutar": tutar, "KDV Oranı (%)": kdv_orani, "KDV Tutarı": kdv_tutari, 
+                        "KDV Dahil Toplam": kdv_dahil_toplam, "Para Birimi": para_birimi, "Durum": durum, 
                         "Fatura Durumu": fatura_durumu, "Yönetici Onayı": yonetici_onayi
                     }
                     df = pd.concat([df, pd.DataFrame([yeni_satir])], ignore_index=False)
                     veri_kaydet(df)
-                    
                     yedek_durumu = cift_yedekleme_yap()
-                    st.success("✅ Veri kurumsal veri tabanına işlendi!")
+                    st.success(f"✅ Sözleşme Kaydedildi! KDV Dahil Toplam: {kdv_dahil_toplam:,.2f} {para_birimi}")
                     st.toast(yedek_durumu)
 
-    # ---------------- 4. SAYFA: KAYIT DÜZENLEME & ONAY PANELİ (Yönetici) ----------------
     elif sayfa == "📝 Kayıt Düzenleme & Onay" and st.session_state.kullanici_rolu == "Yönetici":
         st.markdown("<h3>📝 Sözleşme Düzenleme ve Yönetici Onay Paneli</h3>", unsafe_allow_html=True)
-        
-        if df.empty:
-            st.info("Düzenlenecek kayıt bulunmamaktadır.")
+        if df.empty: st.info("Düzenlenecek kayıt bulunmamaktadır.")
         else:
-            st.write("Düzenlemek istediğiniz kaydı aşağıdaki listeden seçin:")
-            
-            proje_secenekleri = [f"{idx} - [{row['Tür']}] {row['Proje Adı']} ({row['Tutar']} {row['Para Birimi']})" for idx, row in df.iterrows()]
+            proje_secenekleri = [f"{idx} - [{row['Tür']}] {row['Proje Adı']} (Matrah: {row['Tutar']} {row['Para Birimi']})" for idx, row in df.iterrows()]
             secilen_proje_str = st.selectbox("Düzenlenecek Sözleşmeyi Seçin", proje_secenekleri)
-            
             secilen_index = int(secilen_proje_str.split(" - ")[0])
             satir_verisi = df.loc[secilen_index]
             
             with st.form("duzenleme_formu"):
-                st.markdown(f"##### 🛠️ Kayıt #{secilen_index} Düzenleme Alanı")
                 col_d1, col_d2 = st.columns(2)
                 with col_d1:
                     d_proje = st.text_input("Proje / İş Başlığı", value=satir_verisi["Proje Adı"])
                     d_musteri = st.text_input("Müşteri Firma / Kurum", value=satir_verisi["Müşteri/Kurum"])
-                    d_tutar = st.number_input("Sözleşme Tutarı", min_value=0.0, format="%.2f", value=float(satir_verisi["Tutar"]))
+                    d_tutar = st.number_input("Sözleşme Matrah Tutarı", min_value=0.0, format="%.2f", value=float(satir_verisi["Tutar"]))
                 with col_d2:
+                    d_kdv_oran = st.selectbox("KDV Oranı (%)", [0, 1, 10, 20], index=[0, 1, 10, 20].index(int(satir_verisi["KDV Oranı (%)"])))
                     d_pb = st.selectbox("Para Birimi", ["TL", "USD", "EUR", "STG"], index=["TL", "USD", "EUR", "STG"].index(satir_verisi["Para Birimi"]))
                     d_durum = st.selectbox("İş Durumu", ["Beklemede", "Onaylandı", "Reddedildi", "Ödendi / Tahsil Edildi"], index=["Beklemede", "Onaylandı", "Reddedildi", "Ödendi / Tahsil Edildi"].index(satir_verisi["Durum"]))
-                
                 st.divider()
                 col_d3, col_d4 = st.columns(2)
-                with col_d3:
-                    d_fatura = st.selectbox("🧾 Fatura Durumu Güncelle", ["Faturalanmadı", "Faturalandı"], index=["Faturalanmadı", "Faturalandı"].index(satir_verisi["Fatura Durumu"]))
-                with col_d4:
-                    d_onay = st.selectbox("👑 Yönetici Onay Durumu Güncelle", ["Beklemede", "Onaylandı", "Reddedildi"], index=["Beklemede", "Onaylandı", "Reddedildi"].index(satir_verisi["Yönetici Onayı"]))
+                with col_d3: d_fatura = st.selectbox("🧾 Fatura Durumu Güncelle", ["Faturalanmadı", "Faturalandı"], index=["Faturalanmadı", "Faturalandı"].index(satir_verisi["Fatura Durumu"]))
+                with col_d4: d_onay = st.selectbox("👑 Yönetici Onay Durumu Güncelle", ["Beklemede", "Onaylandı", "Reddedildi"], index=["Beklemede", "Onaylandı", "Reddedildi"].index(satir_verisi["Yönetici Onayı"]))
                 
-                guncelle_btn = st.form_submit_button("Değişiklikleri Kaydet ve Buluta Yedekle")
-                
+                guncelle_btn = st.form_submit_button("Değişiklikleri Kaydet, KDV Yeniden Hesapla ve Yedekle")
                 if guncelle_btn:
+                    kdv_t = d_tutar * (d_kdv_oran / 100)
                     df.at[secilen_index, "Proje Adı"] = d_proje
                     df.at[secilen_index, "Müşteri/Kurum"] = d_musteri
                     df.at[secilen_index, "Tutar"] = d_tutar
+                    df.at[secilen_index, "KDV Oranı (%)"] = d_kdv_oran
+                    df.at[secilen_index, "KDV Tutarı"] = kdv_t
+                    df.at[secilen_index, "KDV Dahil Toplam"] = d_tutar + kdv_t
                     df.at[secilen_index, "Para Birimi"] = d_pb
                     df.at[secilen_index, "Durum"] = d_durum
                     df.at[secilen_index, "Fatura Durumu"] = d_fatura
                     df.at[secilen_index, "Yönetici Onayı"] = d_onay
-                    
                     veri_kaydet(df)
-                    yedek_durumu = cift_yedekleme_yap()
-                    st.success("✅ Sözleşme başarıyla güncellendi!")
+                    st.success("✅ Sözleşme ve KDV tutarları başarıyla güncellendi!")
                     st.rerun()
 
-    # ---------------- 5. SAYFA: KULLANICI TANIMLAMA ----------------
     elif sayfa == "👥 Kullanıcı Tanımlama" and st.session_state.kullanici_rolu == "Yönetici":
         st.markdown("<h3>👥 Dinamik Kullanıcı Hesapları ve Rol Atama</h3>", unsafe_allow_html=True)
-        
         c_u1, c_u2 = st.columns(2)
         with c_u1:
-            st.markdown("##### ➕ Yeni Kullanıcı Ekle")
             u_eposta = st.text_input("Personel E-Posta")
             u_sifre = st.text_input("Erişim Şifresi", type="password")
             u_rol = st.selectbox("Yetki Seviyesi (Rol)", ["Yönetici", "Personel"])
-            u_ekle_btn = st.button("Hesabı Tanımla")
-            
-            if u_ekle_btn:
+            if st.button("Hesabı Tanımla"):
                 if u_eposta and u_sifre:
                     if kullanici_ekle(u_eposta, u_sifre, u_rol):
-                        st.success(f"✅ {u_eposta} başarıyla {u_rol} olarak eklendi!")
-                        st.rerun()
-                    else:
-                        st.error("Bu e-posta adresi sistemde zaten kayıtlı!")
-                else:
-                    st.error("Lütfen tüm alanları doldurun.")
-                    
+                        st.success(f"✅ Hesap oluşturuldu!"); st.rerun()
+                    else: st.error("Bu e-posta zaten kayıtlı!")
+                else: st.error("Tüm alanları doldurun.")
         with c_u2:
-            st.markdown("##### 📋 Mevcut Sistem Kullanıcıları")
-            df_goster = pd.read_csv(USERS_FILE)[["eposta", "rol"]]
-            st.dataframe(df_goster, use_container_width=True)
+            st.dataframe(pd.read_csv(USERS_FILE)[["eposta", "rol"]], use_container_width=True)
 
-    # ---------------- 6. SAYFA: SİSTEM AYARLARI ----------------
     elif sayfa == "⚙️ Sistem & Yedekleme" and st.session_state.kullanici_rolu == "Yönetici":
         st.markdown("<h3>⚙️ Altyapı Yönetimi</h3>", unsafe_allow_html=True)
         st.metric("Toplam Sistem Veri Satırı", len(df))
         if st.button("Şimdi Manuel Google Drive Yedeklemesi Tetikle"):
-            sonuc = cift_yedekleme_yap()
-            st.info(sonuc)
+            st.info(cift_yedekleme_yap())
