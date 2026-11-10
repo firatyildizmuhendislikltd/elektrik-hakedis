@@ -7,42 +7,60 @@ from backup import cift_yedekleme_yap
 # 🎨 Kurumsal Renk ve Sayfa Yapılandırması (Siyah, Mavi, Kırmızı Tema)
 st.set_page_config(page_title="Fırat Yıldız ERP", page_icon="🏗️", layout="wide")
 
-# 🖥️ Giriş Ekranı İçin Özel Kurumsal Tasarım (CSS)
+# 🖥️ Tüm Uygulamayı Kapsayan Premium Kurumsal CSS Düzenlemeleri
 st.markdown("""
     <style>
-    /* Giriş başlığı stili */
-    .login-title {
-        text-align: center; 
-        color: #ef4444; /* Kurumsal Kırmızı */
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        font-weight: 700;
-        margin-bottom: 5px;
+    /* Tüm uygulamanın arka planını kurumsal koyu ton yapmak */
+    .stApp {
+        background-color: #0b0f19 !important;
     }
-    .login-subtitle {
-        text-align: center;
-        color: #6b7280; /* Siyah/Gri tonu */
-        font-size: 16px;
-        margin-bottom: 30px;
+    
+    /* Ana başlıklar */
+    h1, h2, h3, h4, h5, h6, .login-title {
+        color: #ef4444 !important; /* Kurumsal Kırmızı */
+        font-family: 'Segoe UI', sans-serif;
+        font-weight: 700 !important;
     }
-    /* Streamlit form kutusunu kurumsal çerçeveye alma */
-    div[data-testid="stForm"] {
-        border: 2px solid #111827 !important; /* Kurumsal Siyah Çerçeve */
-        border-top: 5px solid #2563eb !important; /* Üst Çizgi Mavi */
-        border-radius: 10px !important;
-        padding: 30px !important;
-        background-color: #f9fafb !important;
+    
+    /* İkincil yazılar ve alt başlıklar */
+    .login-subtitle, p, span, label, .stMarkdown {
+        color: #e5e7eb !important; /* Açık Gri / Beyaz Tonu */
     }
-    /* Giriş butonu tasarımı */
-    button[kind="primaryFormSubmit"] {
+
+    /* Giriş Formu ve Veri Kartları Tasarımı */
+    div[data-testid="stForm"], div[data-testid="metric-container"], .stAlert {
+        border: 1px solid #1f2937 !important; 
+        border-top: 4px solid #2563eb !important; /* Kurumsal Mavi Üst Çizgi */
+        border-radius: 8px !important;
+        padding: 20px !important;
+        background-color: #111827 !important; /* Koyu Gri Kutu Arka Planı */
+    }
+    
+    /* Veri tablosu (Dataframe) düzenlemeleri */
+    div[data-testid="stDataFrame"] {
+        background-color: #111827 !important;
+        border: 1px solid #1f2937 !important;
+        border-radius: 8px !important;
+    }
+
+    /* Form ve Giriş Butonları */
+    button[kind="primaryFormSubmit"], .stButton > button {
         background-color: #2563eb !important; /* Kurumsal Mavi */
         color: white !important;
-        border-radius: 5px !important;
+        border-radius: 6px !important;
         width: 100% !important;
-        border: none !important;
         font-weight: bold !important;
+        border: none !important;
     }
-    button[kind="primaryFormSubmit"]:hover {
+    button[kind="primaryFormSubmit"]:hover, .stButton > button:hover {
         background-color: #ef4444 !important; /* Üzerine gelince Kırmızı */
+        color: white !important;
+    }
+    
+    /* Sol menü (Sidebar) özelleştirmesi */
+    section[data-testid="stSidebar"] {
+        background-color: #0f172a !important; /* Çok Koyu Mavi/Siyah */
+        border-right: 1px solid #1e293b !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -96,8 +114,8 @@ if "giris_yapildi" not in st.session_state:
 
 # ---------------- 🔑 GİRİŞ EKRANI ----------------
 if not st.session_state.giris_yapildi:
-    st.markdown("<h1 class='login-title'>FIRAT YILDIZ MÜHENDİSLİK</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='login-subtitle'>Kurumsal ERP & Finansal Kontrol Paneli</p>", unsafe_allow_html=True)
+    st.markdown("<h1 class='login-title' style='text-align: center;'>FIRAT YILDIZ MÜHENDİSLİK</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='login-subtitle' style='text-align: center;'>Kurumsal ERP & Finansal Kontrol Paneli</p>", unsafe_allow_html=True)
     
     _, col_login, _ = st.columns([1, 2, 1])
     with col_login:
@@ -120,7 +138,7 @@ else:
     # ---------------- 📱 SOL MENÜ (SIDEBAR) ----------------
     with st.sidebar:
         st.markdown("<h2 style='color: #ef4444; margin-bottom: 0;'>Fırat Yıldız</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='color: #6b7280; margin-top: 0;'>Mühendislik & ERP Kontrol</p>", unsafe_allow_html=True)
+        st.markdown("<p style='color: #9ca3af; margin-top: 0;'>Mühendislik & ERP Kontrol</p>", unsafe_allow_html=True)
         st.write(f"👤 **Kullanıcı:** {st.session_state.kullanici_adi}")
         st.write(f"🎖️ **Yetki Rolü:** {st.session_state.kullanici_rolu}")
         st.divider()
@@ -138,12 +156,12 @@ else:
 
     # ---------------- 1. SAYFA: DASHBOARD ----------------
     if sayfa == "📊 Genel Durum (Dashboard)":
-        st.markdown("<h3 style='color: #111827;'>📋 Güncel Finansal Durum Özetleri</h3>", unsafe_allow_html=True)
+        st.markdown("<h3>📊 Finansal Durum Özetleri</h3>", unsafe_allow_html=True)
         
         if not df.empty:
             pb_listesi = df["Para Birimi"].unique()
             for pb in pb_listesi:
-                st.markdown(f"#### 🌐 {pb} Bazında Özetler")
+                st.markdown(f"<h4 style='color: #2563eb !important;'>🌐 {pb} Bazında Sözleşme Detayları</h4>", unsafe_allow_html=True)
                 df_pb = df[df["Para Birimi"] == pb]
                 
                 t_toplam = df_pb[df_pb["Tür"] == "Teklif"]["Tutar"].sum()
@@ -160,14 +178,14 @@ else:
                 m4.metric("Faturalanan Hakediş", f"{h_fatura:,.2f} {sym}", f"{h_toplam - h_fatura:,.2f} Kalan")
                 st.divider()
         else:
-            st.info("Sistemde henüz kayıtlı veri bulunmuyor.")
+            st.markdown("<div style='background-color: #111827; padding: 15px; border-left: 5px solid #2563eb; color: #e5e7eb;'>Sistemde henüz kayıtlı veri bulunmuyor. Yeni Kayıt Ekle sekmesinden başlayabilirsiniz.</div>", unsafe_allow_html=True)
 
-        st.markdown("#### 📑 Güncel İşlem Kayıtları Tablosu")
+        st.markdown("<h3>📋 Güncel İşlem Kayıtları Tablosu</h3>", unsafe_allow_html=True)
         st.dataframe(df.sort_index(ascending=False), use_container_width=True)
 
     # ---------------- 2. SAYFA: KURUMSAL RAPORLAMA ----------------
     elif sayfa == "📈 Kurumsal Raporlama":
-        st.markdown("<h3 style='color: #111827;'>📈 Kurumsal Analiz ve Finansal Grafikler</h3>", unsafe_allow_html=True)
+        st.markdown("<h3>📈 Kurumsal Analiz ve Finansal Grafikler</h3>", unsafe_allow_html=True)
         
         if df.empty:
             st.info("Raporlama yapabilmek için lütfen önce veri ekleyin.")
@@ -189,7 +207,7 @@ else:
                     st.caption("Seçilen para birimi ve filtrelere uygun veri bulunamadı.")
     # ---------------- 3. SAYFA: YENİ KAYIT EKLE (Yönetici) ----------------
     elif sayfa == "➕ Yeni Kayıt Ekle" and st.session_state.kullanici_rolu == "Yönetici":
-        st.markdown("<h3 style='color: #111827;'>➕ Yeni Teklif / Hakediş Kontrat Girişi</h3>", unsafe_allow_html=True)
+        st.markdown("<h3>➕ Yeni Teklif / Hakediş Kontrat Girişi</h3>", unsafe_allow_html=True)
         
         with st.form("kurumsal_islem_formu", clear_on_submit=True):
             col_f1, col_f2 = st.columns(2)
@@ -230,7 +248,7 @@ else:
 
     # ---------------- 4. SAYFA: KAYIT DÜZENLEME & ONAY PANELİ (Yönetici) ----------------
     elif sayfa == "📝 Kayıt Düzenleme & Onay" and st.session_state.kullanici_rolu == "Yönetici":
-        st.markdown("<h3 style='color: #111827;'>📝 Sözleşme Düzenleme ve Yönetici Onay Paneli</h3>", unsafe_allow_html=True)
+        st.markdown("<h3>📝 Sözleşme Düzenleme ve Yönetici Onay Paneli</h3>", unsafe_allow_html=True)
         
         if df.empty:
             st.info("Düzenlenecek kayıt bulunmamaktadır.")
@@ -240,7 +258,7 @@ else:
             proje_secenekleri = [f"{idx} - [{row['Tür']}] {row['Proje Adı']} ({row['Tutar']} {row['Para Birimi']})" for idx, row in df.iterrows()]
             secilen_proje_str = st.selectbox("Düzenlenecek Sözleşmeyi Seçin", proje_secenekleri)
             
-            secilen_index = int(secilen_proje_str.split(" - "))
+            secilen_index = int(secilen_proje_str.split(" - ")[0])
             satir_verisi = df.loc[secilen_index]
             
             with st.form("duzenleme_formu"):
@@ -279,7 +297,7 @@ else:
 
     # ---------------- 5. SAYFA: KULLANICI TANIMLAMA ----------------
     elif sayfa == "👥 Kullanıcı Tanımlama" and st.session_state.kullanici_rolu == "Yönetici":
-        st.markdown("<h3 style='color: #111827;'>👥 Dinamik Kullanıcı Hesapları ve Rol Atama</h3>", unsafe_allow_html=True)
+        st.markdown("<h3>👥 Dinamik Kullanıcı Hesapları ve Rol Atama</h3>", unsafe_allow_html=True)
         
         c_u1, c_u2 = st.columns(2)
         with c_u1:
@@ -306,7 +324,7 @@ else:
 
     # ---------------- 6. SAYFA: SİSTEM AYARLARI ----------------
     elif sayfa == "⚙️ Sistem & Yedekleme" and st.session_state.kullanici_rolu == "Yönetici":
-        st.markdown("<h3 style='color: #111827;'>⚙️ Altyapı Yönetimi</h3>", unsafe_allow_html=True)
+        st.markdown("<h3>⚙️ Altyapı Yönetimi</h3>", unsafe_allow_html=True)
         st.metric("Toplam Sistem Veri Satırı", len(df))
         if st.button("Şimdi Manuel Google Drive Yedeklemesi Tetikle"):
             sonuc = cift_yedekleme_yap()
