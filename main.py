@@ -10,49 +10,30 @@ st.set_page_config(page_title="Fırat Yıldız ERP", page_icon="🏗️", layout
 # 🖥️ Gözü Yormayan, Aydınlık ve Kurumsal CSS Düzenlemeleri
 st.markdown("""
     <style>
-    /* Arka planı boğucu siyahtan modern ve temiz kurumsal açık griye çekiyoruz */
-    .stApp { 
-        background-color: #f4f6f9 !important; 
-    }
-    
-    /* Ana Başlıklar Kurumsal Kırmızı */
+    .stApp { background-color: #f4f6f9 !important; }
     h1, h2, h3, .login-title {
         color: #d32f2f !important; 
         font-family: 'Segoe UI', Arial, sans-serif;
         font-weight: 700 !important;
     }
+    h4, h5, h6 { color: #0f172a !important; font-weight: 600 !important; }
+    p, span, label, .stMarkdown { color: #1e293b !important; }
     
-    /* Alt Başlıklar Kurumsal Gece Mavisi */
-    h4, h5, h6 {
-        color: #0f172a !important;
-        font-weight: 600 !important;
-    }
-    
-    /* Genel metin renkleri net görünsün diye koyu füme/siyah */
-    p, span, label, .stMarkdown { 
-        color: #1e293b !important; 
-    }
-    
-    /* Giriş Formu ve Veri Kartları Tasarımı */
     div[data-testid="stForm"], div[data-testid="metric-container"], .stAlert {
         border: 1px solid #cbd5e1 !important; 
-        border-top: 5px solid #1e40af !important; /* Üst Çizgi Güçlü Kurumsal Mavi */
+        border-top: 5px solid #1e40af !important; 
         border-radius: 10px !important;
         padding: 25px !important;
-        background-color: #ffffff !important; /* Form içi temiz beyaz */
+        background-color: #ffffff !important;
         box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
     }
-    
-    /* Veri tablosu (Dataframe) başlığı ve çerçevesi */
     div[data-testid="stDataFrame"] {
         background-color: #ffffff !important;
         border: 1px solid #cbd5e1 !important;
         border-radius: 8px !important;
     }
-
-    /* Kurumsal Onay ve Form Butonları */
     button[kind="primaryFormSubmit"], .stButton > button {
-        background-color: #1e40af !important; /* Güçlü Mavi */
+        background-color: #1e40af !important;
         color: white !important;
         border-radius: 6px !important;
         width: 100% !important;
@@ -61,17 +42,15 @@ st.markdown("""
         padding: 10px !important;
     }
     button[kind="primaryFormSubmit"]:hover, .stButton > button:hover {
-        background-color: #d32f2f !important; /* Üzerine gelindiğinde Kırmızı */
+        background-color: #d32f2f !important;
         color: white !important;
     }
-    
-    /* Sol Menü (Sidebar) Özelleştirmesi */
     section[data-testid="stSidebar"] {
-        background-color: #0f172a !important; /* Kararlı Asil Gece Mavisi */
+        background-color: #0f172a !important;
         border-right: 1px solid #334155 !important;
     }
     section[data-testid="stSidebar"] stMarkdown, section[data-testid="stSidebar"] p, section[data-testid="stSidebar"] label {
-        color: #f1f5f9 !important; /* Sol menü yazıları beyaz */
+        color: #f1f5f9 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -125,19 +104,15 @@ if "giris_yapildi" not in st.session_state:
     st.session_state.kullanici_adi = ""
     st.session_state.kullanici_rolu = ""
 
-# ---------------- 🔑 GİRİŞ EKRANI (HATA DÜZELTİLDİ) ----------------
 if not st.session_state.giris_yapildi:
     st.markdown("<h1 class='login-title' style='text-align: center;'>FIRAT YILDIZ MÜHENDİSLİK</h1>", unsafe_allow_html=True)
     st.markdown("<p class='login-subtitle' style='text-align: center; color: #475569;'>Kurumsal ERP & Finansal Kontrol Paneli</p>", unsafe_allow_html=True)
-    
-    col_left, col_login, col_right = st.columns([1, 2, 1]) # Sütun dengesi tam sağlandı
+    col_left, col_login, col_right = st.columns([1, 2, 1])
     with col_login:
         with st.form("giris_formu"):
             k_adi = st.text_input("Kurumsal E-Posta Adresi", placeholder="admin@firma.com")
             sifre = st.text_input("Erişim Şifresi", type="password")
-            giri_butonu = st.form_submit_button("Sisteme Güvenli Giriş Yap")
-            
-            if giri_butonu:
+            if st.form_submit_button("Sisteme Güvenli Giriş Yap"):
                 KULLANICILAR = kullanicilari_yukle()
                 if k_adi in KULLANICILAR and str(KULLANICILAR[k_adi]["sifre"]) == str(sifre):
                     st.session_state.giris_yapildi = True
@@ -153,11 +128,9 @@ else:
         st.write(f"👤 **Kullanıcı:** {st.session_state.kullanici_adi}")
         st.write(f"🎖️ **Yetki:** {st.session_state.kullanici_rolu}")
         st.divider()
-        
         menü = ["📊 Genel Durum (Dashboard)", "📈 Kurumsal Raporlama"]
         if st.session_state.kullanici_rolu == "Yönetici":
             menü.extend(["➕ Yeni Kayıt Ekle", "📝 Kayıt Düzenleme & Onay", "👥 Kullanıcı Tanımlama", "⚙️ Sistem & Yedekleme"])
-            
         sayfa = st.radio("Navigasyon Menüsü", menü, index=0)
         st.divider()
         if st.button("🚪 Güvenli Çıkış Yap"):
@@ -189,22 +162,38 @@ else:
         st.markdown("<h3>📋 Güncel İşlem Kayıtları Tablosu</h3>", unsafe_allow_html=True)
         st.dataframe(df.sort_index(ascending=False), use_container_width=True)
 
-    # 2. SAYFA: KURUMSAL RAPORLAMA
+    # 2. SAYFA: AYRIŞTIRILMIŞ KDV RAPORLAMA (YENİLENDİ)
     elif sayfa == "📈 Kurumsal Raporlama":
-        st.markdown("<h3>📈 Kurumsal Analiz ve Finansal Grafikler</h3>", unsafe_allow_html=True)
+        st.markdown("<h3>📈 Kurumsal Mali Analiz ve Ayrıştırılmış KDV Raporu</h3>", unsafe_allow_html=True)
         if df.empty: st.info("Raporlama yapabilmek için lütfen önce veri ekleyin.")
         else:
-            c_grafik, c_filtre = st.columns(2)
-            with c_filtre:
-                f_pb = st.selectbox("Raporlanacak Para Birimi", ["TL", "USD", "EUR", "STG"])
-                f_tur = st.multiselect("İşlem Türü", ["Teklif", "Hakediş"], default=["Teklif", "Hakediş"])
-            df_filtreli = df[(df["Para Birimi"] == f_pb) & (df["Tür"].isin(f_tur))]
-            with c_grafik:
-                if not df_filtreli.empty:
-                    grafik_data = df_filtreli.groupby(["Tür", "Fatura Durumu"])["KDV Dahil Toplam"].sum().unstack().fillna(0)
-                    st.bar_chart(grafik_data)
-                else: st.caption("Uygun veri bulunamadı.")
-
+            col_chart, col_filter = st.columns([2, 1])
+            with col_filter:
+                st.markdown("#### 🎯 Para Birimi ve Filtre")
+                f_pb = st.selectbox("Rapor Döviz Cinsi", ["TL", "USD", "EUR", "STG"])
+                f_tur = st.multiselect("Filtreleme Türü", ["Teklif", "Hakediş"], default=["Teklif", "Hakediş"])
+            
+            df_rep = df[(df["Para Birimi"] == f_pb) & (df["Tür"].isin(f_tur))]
+            sym = CURRENCY_SYMBOLS.get(f_pb, "")
+            
+            if not df_rep.empty:
+                # 📊 Net Kurumsal Ayrıştırılmış Metrik Kartları
+                rep_matrah = df_rep["Tutar"].sum()
+                rep_kdv = df_rep["KDV Tutarı"].sum()
+                rep_toplam = df_rep["KDV Dahil Toplam"].sum()
+                
+                rm1, rm2, rm3 = st.columns(3)
+                rm1.metric("Toplam Matrah (KDV Hariç)", f"{rep_matrah:,.2f} {sym}")
+                rm2.metric("Toplam KDV Yükü", f"{rep_kdv:,.2f} {sym}", delta="Vergi Kırılımı", delta_color="inverse")
+                rm3.metric("KDV Dahil Genel Toplam", f"{rep_toplam:,.2f} {sym}")
+                st.divider()
+                
+                with col_chart:
+                    st.markdown(f"##### {f_pb} Cinsinden Matrah ve KDV Tutarı Karşılaştırması")
+                    # Matrah ve KDV'yi tam ayıran kurumsal grafik veri seti
+                    chart_df = df_rep.groupby("Tür")[["Tutar", "KDV Tutarı"]].sum().rename(columns={"Tutar": "Matrah bütçesi", "KDV Tutarı": "KDV Vergisi"})
+                    st.bar_chart(chart_df)
+            else: st.info("Seçilen döviz cinsine ve filtrelere ait veri bulunamadı.")
     # 3. SAYFA: YENİ KAYIT EKLE
     elif sayfa == "➕ Yeni Kayıt Ekle" and st.session_state.kullanici_rolu == "Yönetici":
         st.markdown("<h3>➕ Yeni Teklif / Hakediş Kontrat Girişi (KDV Hesaplamalı)</h3>", unsafe_allow_html=True)
@@ -218,7 +207,7 @@ else:
                 tutar = st.number_input("Sözleşme Matrah Tutarı (KDV Hariç)", min_value=0.0, format="%.2f")
                 kdv_orani = st.selectbox("KDV Oranı (%)", [0, 1, 10, 20], index=3)
                 para_birimi = st.selectbox("Para Birimi", ["TL", "USD", "EUR", "STG"])
-                durum = st.selectbox("Mevcut İş Durumu", ["Beklemede", "Onaylandı", "Reddedildi", "Ödendi / Tahsil Edildi"])
+                durum = st.selectbox("Mevcut İş Durumu", ["Beklemede", "Onaylandı", "Reddedildi", "Ödendi / Tassil Edildi"])
             st.divider()
             col_f3, col_f4 = st.columns(2)
             with col_f3: fatura_durumu = st.selectbox("Fatura Durumu", ["Faturalanmadı", "Faturalandı"])
@@ -236,7 +225,7 @@ else:
                     }
                     df = pd.concat([df, pd.DataFrame([yeni_satir])], ignore_index=False)
                     veri_kaydet(df); cift_yedekleme_yap()
-                    st.success(f"✅ Başarıyla Kaydedildi! Toplam: {kdv_d:,.2f} {para_birimi}"); st.rerun()
+                    st.success(f"✅ Başarıyla Kaydedildi!"); st.rerun()
 
     # 4. SAYFA: KAYIT DÜZENLEME & ONAY PANELİ
     elif sayfa == "📝 Kayıt Düzenleme & Onay" and st.session_state.kullanici_rolu == "Yönetici":
@@ -245,7 +234,7 @@ else:
         else:
             proje_secenekleri = [f"{idx} - [{row['Tür']}] {row['Proje Adı']} (Matrah: {row['Tutar']} {row['Para Birimi']})" for idx, row in df.iterrows()]
             secilen_proje_str = st.selectbox("Düzenlenecek Sözleşmeyi Seçin", proje_secenekleri)
-            secilen_index = int(secilen_proje_str.split(" - ")[0])
+            secilen_index = int(secilen_proje_str.split(" - "))
             satir_verisi = df.loc[secilen_index]
             
             with st.form("duzenleme_formu"):
@@ -257,7 +246,7 @@ else:
                 with col_d2:
                     d_kdv_oran = st.selectbox("KDV Oranı (%)", [0, 1, 10, 20], index=[0, 1, 10, 20].index(int(satir_verisi["KDV Oranı (%)"])))
                     d_pb = st.selectbox("Para Birimi", ["TL", "USD", "EUR", "STG"], index=["TL", "USD", "EUR", "STG"].index(satir_verisi["Para Birimi"]))
-                    d_durum = st.selectbox("İş Durumu", ["Beklemede", "Onaylandı", "Reddedildi", "Ödendi / Tahsil Edildi"], index=["Beklemede", "Onaylandı", "Reddedildi", "Ödendi / Tahsil Edildi"].index(satir_verisi["Durum"]))
+                    d_durum = st.selectbox("İş Durumu", ["Beklemede", "Onaylandı", "Reddedildi", "Ödendi / Tassil Edildi"], index=["Beklemede", "Onaylandı", "Reddedildi", "Ödendi / Tassil Edildi"].index(satir_verisi["Durum"]))
                 st.divider()
                 col_d3, col_d4 = st.columns(2)
                 with col_d3: d_fatura = st.selectbox("🧾 Fatura Durumu Güncelle", ["Faturalanmadı", "Faturalandı"], index=["Faturalanmadı", "Faturalandı"].index(satir_verisi["Fatura Durumu"]))
@@ -292,5 +281,4 @@ else:
     elif sayfa == "⚙️ Sistem & Yedekleme" and st.session_state.kullanici_rolu == "Yönetici":
         st.markdown("<h3>⚙️ Altyapı Yönetimi</h3>", unsafe_allow_html=True)
         st.metric("Toplam Sistem Veri Satırı", len(df))
-        if st.button("Şimdi Manuel Google Drive Yedeklemesi Tetikle"):
-            st.info(cift_yedekleme_yap())
+        if st.button("Şimdi Manuel Google Drive Yedeklemesi Tetikle"): st.info(cift_yedekleme_yap())
