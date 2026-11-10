@@ -7,13 +7,50 @@ from backup import cift_yedekleme_yap
 # 🎨 Kurumsal Renk ve Sayfa Yapılandırması (Siyah, Mavi, Kırmızı Tema)
 st.set_page_config(page_title="Fırat Yıldız ERP", page_icon="🏗️", layout="wide")
 
+# 🖥️ Giriş Ekranı İçin Özel Kurumsal Tasarım (CSS)
+st.markdown("""
+    <style>
+    /* Giriş başlığı stili */
+    .login-title {
+        text-align: center; 
+        color: #ef4444; /* Kurumsal Kırmızı */
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+    .login-subtitle {
+        text-align: center;
+        color: #6b7280; /* Siyah/Gri tonu */
+        font-size: 16px;
+        margin-bottom: 30px;
+    }
+    /* Streamlit form kutusunu kurumsal çerçeveye alma */
+    div[data-testid="stForm"] {
+        border: 2px solid #111827 !important; /* Kurumsal Siyah Çerçeve */
+        border-top: 5px solid #2563eb !important; /* Üst Çizgi Mavi */
+        border-radius: 10px !important;
+        padding: 30px !important;
+        background-color: #f9fafb !important;
+    }
+    /* Giriş butonu tasarımı */
+    button[kind="primaryFormSubmit"] {
+        background-color: #2563eb !important; /* Kurumsal Mavi */
+        color: white !important;
+        border-radius: 5px !important;
+        width: 100% !important;
+        border: none !important;
+        font-weight: bold !important;
+    }
+    button[kind="primaryFormSubmit"]:hover {
+        background-color: #ef4444 !important; /* Üzerine gelince Kırmızı */
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 DB_FILE = "teklif_hakedis_db.csv"
 USERS_FILE = "kullanicilar_db.csv"
-
-# Varsayılan para birimi simgeleri
 CURRENCY_SYMBOLS = {"TL": "₺", "USD": "$", "EUR": "€", "STG": "£"}
 
-# 🔐 Dosya Tabanlı Dinamik Kullanıcı Yönetimi
 def kullanicilari_yukle():
     if os.path.exists(USERS_FILE):
         return pd.read_csv(USERS_FILE).set_index("eposta").to_dict(orient="index")
@@ -30,16 +67,13 @@ def kullanici_ekle(eposta, sifre, rol):
         df_users = pd.read_csv(USERS_FILE)
     else:
         df_users = pd.DataFrame(columns=["eposta", "sifre", "rol"])
-    
     if eposta in df_users["eposta"].values:
         return False
-    
     yeni_user = pd.DataFrame([{"eposta": eposta, "sifre": sifre, "rol": rol}])
     df_users = pd.concat([df_users, yeni_user], ignore_index=True)
     df_users.to_csv(USERS_FILE, index=False)
     return True
 
-# 📊 Finansal Veri Yönetimi
 def veri_yukle():
     if os.path.exists(DB_FILE):
         df_loaded = pd.read_csv(DB_FILE)
@@ -52,7 +86,6 @@ def veri_yukle():
 def veri_kaydet(df):
     df.to_csv(DB_FILE, index=False, encoding="utf-8-sig")
 
-# Oturum ve Veri Başlatma
 KULLANICILAR = kullanicilari_yukle()
 df = veri_yukle()
 
@@ -63,13 +96,15 @@ if "giris_yapildi" not in st.session_state:
 
 # ---------------- 🔑 GİRİŞ EKRANI ----------------
 if not st.session_state.giris_yapildi:
-    st.markdown("<h2 style='text-align: center; color: #1e3a8a;'>🏗️ Fırat Yıldız Mühendislik - Kurumsal ERP Girişi</h2>", unsafe_allow_html=True)
-    col_login, _ = st.columns(2)
+    st.markdown("<h1 class='login-title'>FIRAT YILDIZ MÜHENDİSLİK</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='login-subtitle'>Kurumsal ERP & Finansal Kontrol Paneli</p>", unsafe_allow_html=True)
+    
+    _, col_login, _ = st.columns([1, 2, 1])
     with col_login:
         with st.form("giris_formu"):
-            k_adi = st.text_input("E-Posta Adresi", placeholder="ornek@firma.com")
-            sifre = st.text_input("Şifre", type="password")
-            giri_butonu = st.form_submit_button("Sisteme Giriş Yap")
+            k_adi = st.text_input("Kurumsal E-Posta Adresi", placeholder="ornek@firma.com")
+            sifre = st.text_input("Erişim Şifresi", type="password")
+            giri_butonu = st.form_submit_button("Sisteme Güvenli Giriş Yap")
             
             if giri_butonu:
                 KULLANICILAR = kullanicilari_yukle()
@@ -205,7 +240,7 @@ else:
             proje_secenekleri = [f"{idx} - [{row['Tür']}] {row['Proje Adı']} ({row['Tutar']} {row['Para Birimi']})" for idx, row in df.iterrows()]
             secilen_proje_str = st.selectbox("Düzenlenecek Sözleşmeyi Seçin", proje_secenekleri)
             
-            secilen_index = int(secilen_proje_str.split(" - ")[0])
+            secilen_index = int(secilen_proje_str.split(" - "))
             satir_verisi = df.loc[secilen_index]
             
             with st.form("duzenleme_formu"):
