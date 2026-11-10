@@ -107,7 +107,7 @@ if "giris_yapildi" not in st.session_state:
 if not st.session_state.giris_yapildi:
     st.markdown("<h1 class='login-title' style='text-align: center;'>FIRAT YILDIZ MÜHENDİSLİK</h1>", unsafe_allow_html=True)
     st.markdown("<p class='login-subtitle' style='text-align: center; color: #475569;'>Kurumsal ERP & Finansal Kontrol Paneli</p>", unsafe_allow_html=True)
-    col_left, col_login, col_right = st.columns([1, 2, 1])
+    col_left, col_login, col_right = st.columns()
     with col_login:
         with st.form("giris_formu"):
             k_adi = st.text_input("Kurumsal E-Posta Adresi", placeholder="admin@firma.com")
@@ -137,37 +137,50 @@ else:
             st.session_state.giris_yapildi = False
             st.rerun()
 
-    # 1. SAYFA: DASHBOARD
+    # 1. SAYFA: DASHBOARD (ÜST METRİKLER TAMAMEN YENİLENDİ)
     if sayfa == "📊 Genel Durum (Dashboard)":
-        st.markdown("<h3>📊 Finansal Durum Özetleri (KDV Dahil)</h3>", unsafe_allow_html=True)
+        st.markdown("<h3>📊 Finansal Durum Özetleri (KDV Kırılımlı)</h3>", unsafe_allow_html=True)
         if not df.empty:
             for pb in df["Para Birimi"].unique():
-                st.markdown(f"#### 🌐 {pb} Bazında Kurumsal Özetler")
+                st.markdown(f"<h4 style='color: #1e40af !important;'>🌐 {pb} Bazında Kurumsal Durum</h4>", unsafe_allow_html=True)
                 df_pb = df[df["Para Birimi"] == pb]
-                t_matrah = df_pb[df_pb["Tür"] == "Teklif"]["Tutar"].sum()
-                t_kdv_dahil = df_pb[df_pb["Tür"] == "Teklif"]["KDV Dahil Toplam"].sum()
-                h_matrah = df_pb[df_pb["Tür"] == "Hakediş"]["Tutar"].sum()
-                h_kdv_dahil = df_pb[df_pb["Tür"] == "Hakediş"]["KDV Dahil Toplam"].sum()
-                t_onay_kdvli = df_pb[(df_pb["Tür"] == "Teklif") & (df_pb["Yönetici Onayı"] == "Onaylandı")]["KDV Dahil Toplam"].sum()
-                h_fatura_kdvli = df_pb[(df_pb["Tür"] == "Hakediş") & (df_pb["Fatura Durumu"] == "Faturalandı")]["KDV Dahil Toplam"].sum()
-                
-                m1, m2, m3, m4 = st.columns(4)
                 sym = CURRENCY_SYMBOLS.get(pb, "")
-                m1.metric("Toplam Teklif (KDV'li)", f"{t_kdv_dahil:,.2f} {sym}", f"Matrah: {t_matrah:,.2f} {sym}")
-                m2.metric("Onaylı Teklif (KDV'li)", f"{t_onay_kdvli:,.2f} {sym}")
-                m3.metric("Toplam Hakediş (KDV'li)", f"{h_kdv_dahil:,.2f} {sym}", f"Matrah: {h_matrah:,.2f} {sym}")
-                m4.metric("Faturalanan Hakediş (KDV'li)", f"{h_fatura_kdvli:,.2f} {sym}", f"Kalan: {(h_kdv_dahil - h_fatura_kdvli):,.2f} {sym}")
+                
+                # Teklif Grubu Hesaplamaları
+                t_df = df_pb[df_pb["Tür"] == "Teklif"]
+                t_matrah = t_df["Tutar"].sum()
+                t_kdv = t_df["KDV Tutarı"].sum()
+                t_toplam = t_df["KDV Dahil Toplam"].sum()
+                
+                # Hakediş Grubu Hesaplamaları
+                h_df = df_pb[df_pb["Tür"] == "Hakediş"]
+                h_matrah = h_df["Tutar"].sum()
+                h_kdv = h_df["KDV Tutarı"].sum()
+                h_toplam = h_df["KDV Dahil Toplam"].sum()
+                
+                # 📊 Teklif Satırı (Matrah, KDV, Toplam)
+                st.write("**📝 TEKLİFLER GRUBU**")
+                mt1, mt2, mt3 = st.columns(3)
+                mt1.metric("Toplam Teklif (KDV Hariç)", f"{t_matrah:,.2f} {sym}")
+                mt2.metric("Teklif Toplam KDV'si", f"{t_kdv:,.2f} {sym}")
+                mt3.metric("Teklif Genel Toplam (KDV Dahil)", f"{t_toplam:,.2f} {sym}")
+                
+                # 📊 Hakediş Satırı (Matrah, KDV, Toplam)
+                st.write("**🏗️ HAKEDİŞLER GRUBU**")
+                mh1, mh2, mh3 = st.columns(3)
+                mh1.metric("Toplam Hakediş (KDV Hariç)", f"{h_matrah:,.2f} {sym}")
+                mh2.metric("Hakediş Toplam KDV'si", f"{h_kdv:,.2f} {sym}")
+                mh3.metric("Hakediş Genel Toplam (KDV Dahil)", f"{h_toplam:,.2f} {sym}")
                 st.divider()
         else: st.info("Sistemde henüz kayıtlı veri bulunmuyor.")
         st.markdown("<h3>📋 Güncel İşlem Kayıtları Tablosu</h3>", unsafe_allow_html=True)
         st.dataframe(df.sort_index(ascending=False), use_container_width=True)
-
-    # 2. SAYFA: AYRIŞTIRILMIŞ KDV RAPORLAMA (YENİLENDİ)
+    # 2. SAYFA: KURUMSAL RAPORLAMA
     elif sayfa == "📈 Kurumsal Raporlama":
         st.markdown("<h3>📈 Kurumsal Mali Analiz ve Ayrıştırılmış KDV Raporu</h3>", unsafe_allow_html=True)
         if df.empty: st.info("Raporlama yapabilmek için lütfen önce veri ekleyin.")
         else:
-            col_chart, col_filter = st.columns([2, 1])
+            col_chart, col_filter = st.columns(2)
             with col_filter:
                 st.markdown("#### 🎯 Para Birimi ve Filtre")
                 f_pb = st.selectbox("Rapor Döviz Cinsi", ["TL", "USD", "EUR", "STG"])
@@ -177,23 +190,22 @@ else:
             sym = CURRENCY_SYMBOLS.get(f_pb, "")
             
             if not df_rep.empty:
-                # 📊 Net Kurumsal Ayrıştırılmış Metrik Kartları
                 rep_matrah = df_rep["Tutar"].sum()
                 rep_kdv = df_rep["KDV Tutarı"].sum()
                 rep_toplam = df_rep["KDV Dahil Toplam"].sum()
                 
                 rm1, rm2, rm3 = st.columns(3)
                 rm1.metric("Toplam Matrah (KDV Hariç)", f"{rep_matrah:,.2f} {sym}")
-                rm2.metric("Toplam KDV Yükü", f"{rep_kdv:,.2f} {sym}", delta="Vergi Kırılımı", delta_color="inverse")
+                rm2.metric("Toplam KDV Yükü", f"{rep_kdv:,.2f} {sym}")
                 rm3.metric("KDV Dahil Genel Toplam", f"{rep_toplam:,.2f} {sym}")
                 st.divider()
                 
                 with col_chart:
                     st.markdown(f"##### {f_pb} Cinsinden Matrah ve KDV Tutarı Karşılaştırması")
-                    # Matrah ve KDV'yi tam ayıran kurumsal grafik veri seti
                     chart_df = df_rep.groupby("Tür")[["Tutar", "KDV Tutarı"]].sum().rename(columns={"Tutar": "Matrah bütçesi", "KDV Tutarı": "KDV Vergisi"})
                     st.bar_chart(chart_df)
-            else: st.info("Seçilen döviz cinsine ve filtrelere ait veri bulunamadı.")
+            else: st.info("Seçilen döviz cinsine ait veri bulunamadı.")
+
     # 3. SAYFA: YENİ KAYIT EKLE
     elif sayfa == "➕ Yeni Kayıt Ekle" and st.session_state.kullanici_rolu == "Yönetici":
         st.markdown("<h3>➕ Yeni Teklif / Hakediş Kontrat Girişi (KDV Hesaplamalı)</h3>", unsafe_allow_html=True)
@@ -207,7 +219,7 @@ else:
                 tutar = st.number_input("Sözleşme Matrah Tutarı (KDV Hariç)", min_value=0.0, format="%.2f")
                 kdv_orani = st.selectbox("KDV Oranı (%)", [0, 1, 10, 20], index=3)
                 para_birimi = st.selectbox("Para Birimi", ["TL", "USD", "EUR", "STG"])
-                durum = st.selectbox("Mevcut İş Durumu", ["Beklemede", "Onaylandı", "Reddedildi", "Ödendi / Tassil Edildi"])
+                durum = st.selectbox("Mevcut İş Durumu", ["Beklemede", "Onaylandı", "Reddedildi", "Ödendi / Tahsil Edildi"])
             st.divider()
             col_f3, col_f4 = st.columns(2)
             with col_f3: fatura_durumu = st.selectbox("Fatura Durumu", ["Faturalanmadı", "Faturalandı"])
@@ -246,7 +258,7 @@ else:
                 with col_d2:
                     d_kdv_oran = st.selectbox("KDV Oranı (%)", [0, 1, 10, 20], index=[0, 1, 10, 20].index(int(satir_verisi["KDV Oranı (%)"])))
                     d_pb = st.selectbox("Para Birimi", ["TL", "USD", "EUR", "STG"], index=["TL", "USD", "EUR", "STG"].index(satir_verisi["Para Birimi"]))
-                    d_durum = st.selectbox("İş Durumu", ["Beklemede", "Onaylandı", "Reddedildi", "Ödendi / Tassil Edildi"], index=["Beklemede", "Onaylandı", "Reddedildi", "Ödendi / Tassil Edildi"].index(satir_verisi["Durum"]))
+                    d_durum = st.selectbox("İş Durumu", ["Beklemede", "Onaylandı", "Reddedildi", "Ödendi / Tahsil Edildi"], index=["Beklemede", "Onaylandı", "Reddedildi", "Ödendi / Tahsil Edildi"].index(satir_verisi["Durum"]))
                 st.divider()
                 col_d3, col_d4 = st.columns(2)
                 with col_d3: d_fatura = st.selectbox("🧾 Fatura Durumu Güncelle", ["Faturalanmadı", "Faturalandı"], index=["Faturalanmadı", "Faturalandı"].index(satir_verisi["Fatura Durumu"]))
