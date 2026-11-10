@@ -171,30 +171,49 @@ else:
         else: st.info("Sistemde henüz kayıtlı veri bulunmuyor.")
         st.markdown("<h3>📋 Güncel İşlem Kayıtları Tablosu</h3>", unsafe_allow_html=True)
         st.dataframe(df.sort_index(ascending=False), use_container_width=True)
-
-    # 2. SAYFA: KURUMSAL RAPORLAMA
+    # 2. SAYFA: MÜŞTERİ SEÇMELİ KURUMSAL RAPORLAMA (YENİLENDİ)
     elif sayfa == "📈 Kurumsal Raporlama":
-        st.markdown("<h3>📈 Kurumsal Mali Analiz ve Ayrıştırılmış KDV Raporu</h3>", unsafe_allow_html=True)
-        if df.empty: st.info("Raporlama yapabilmek için lütfen önce veri ekleyin.")
+        st.markdown("<h3>📈 Kurumsal Mali Analiz ve Müşteri Bazlı KDV Raporu</h3>", unsafe_allow_html=True)
+        if df.empty: 
+            st.info("Raporlama yapabilmek için lütfen önce veri ekleyin.")
         else:
             col_chart, col_filter = st.columns(2)
             with col_filter:
+                st.markdown("#### 🎯 Rapor Filtreleme Paneli")
                 f_pb = st.selectbox("Rapor Döviz Cinsi", ["TL", "USD", "EUR", "STG"])
                 f_tur = st.multiselect("Filtreleme Türü", ["Teklif", "Hakediş"], default=["Teklif", "Hakediş"])
+                
+                # 👥 DİNAMİK MÜŞTERİ SEÇİM ALANI (Tümünü Seçme Opsiyonu Dahil)
+                veri_tabanindaki_musteriler = sorted(list(df["Müşteri/Kurum"].dropna().unique()))
+                musteri_opsiyonlari = ["Tüm Müşteriler"] + veri_tabanindaki_musteriler
+                secilen_musteri = st.selectbox("Müşteri / Kurum Seçin", musteri_opsiyonlari)
+            
+            # Filtreleme mantığı
             df_rep = df[(df["Para Birimi"] == f_pb) & (df["Tür"].isin(f_tur))]
+            if secilen_musteri != "Tüm Müşteriler":
+                df_rep = df_rep[df_rep["Müşteri/Kurum"] == secilen_musteri]
+                
             sym = CURRENCY_SYMBOLS.get(f_pb, "")
             
             if not df_rep.empty:
-                rep_matrah, rep_kdv, rep_toplam = df_rep["Tutar"].sum(), df_rep["KDV Tutarı"].sum(), df_rep["KDV Dahil Toplam"].sum()
+                # 📊 Seçilen Müşteriye Ait Ayrıştırılmış Kurumsal Metrikler
+                rep_matrah = df_rep["Tutar"].sum()
+                rep_kdv = df_rep["KDV Tutarı"].sum()
+                rep_toplam = df_rep["KDV Dahil Toplam"].sum()
+                
+                st.markdown(f"##### 🏢 {secilen_musteri} - Finansal Özet Tablosu")
                 rm1, rm2, rm3 = st.columns(3)
                 rm1.metric("Toplam Matrah (KDV Hariç)", f"{rep_matrah:,.2f} {sym}")
-                rm2.metric("Toplam KDV Yükü", f"{rep_kdv:,.2f} {sym}")
+                rm2.metric("Toplam KDV Tutarı", f"{rep_kdv:,.2f} {sym}")
                 rm3.metric("KDV Dahil Genel Toplam", f"{rep_toplam:,.2f} {sym}")
                 st.divider()
+                
                 with col_chart:
+                    st.markdown(f"##### {f_pb} Cinsinden Matrah ve KDV Ayrışım Grafiği")
                     chart_df = df_rep.groupby("Tür")[["Tutar", "KDV Tutarı"]].sum().rename(columns={"Tutar": "Matrah bütçesi", "KDV Tutarı": "KDV Vergisi"})
                     st.bar_chart(chart_df)
-            else: st.info("Seçilen döviz cinsine ait veri bulunamadı.")
+            else: 
+                st.info("Seçilen kriterlere ve müşteriye ait kayıtlı veri bulunamadı.")
 
     # 3. SAYFA: YENİ KAYIT EKLE
     elif sayfa == "➕ Yeni Kayıt Ekle" and st.session_state.kullanici_rolu == "Yönetici":
@@ -229,15 +248,13 @@ else:
                     veri_kaydet(df); cift_yedekleme_yap()
                     st.success(f"✅ Başarıyla Kaydedildi!"); st.rerun()
 
-    # 4. SAYFA: KAYIT DÜZENLEME & ONAY PANELİ (HATA KESİN DÜZELTİLDİ)
+    # 4. SAYFA: KAYIT DÜZENLEME & ONAY PANELİ
     elif sayfa == "📝 Kayıt Düzenleme & Onay" and st.session_state.kullanici_rolu == "Yönetici":
         st.markdown("<h3>📝 Sözleşme Düzenleme ve Yönetici Onay Paneli</h3>", unsafe_allow_html=True)
         if df.empty: st.info("Düzenlenecek kayıt bulunmamaktadır.")
         else:
             proje_secenekleri = [f"{idx} - [{row['Tür']}] {row['Proje Adı']} (Matrah: {row['Tutar']} {row['Para Birimi']})" for idx, row in df.iterrows()]
             secilen_proje_str = st.selectbox("Düzenlenecek Sözleşmeyi Seçin", proje_secenekleri)
-            
-            # 🛠️ HATANIN ÇÖZÜLDÜĞÜ YER: [0] eklenerek metinden sadece sayısal indeks temizce çekildi
             secilen_index = int(secilen_proje_str.split(" - ")[0])
             satir_verisi = df.loc[secilen_index]
             
@@ -266,9 +283,9 @@ else:
                     df.at[secilen_index, "Para Birimi"], df.at[secilen_index, "Durum"] = d_pb, d_durum
                     df.at[secilen_index, "Fatura Durumu"], df.at[secilen_index, "Yönetici Onayı"] = d_fatura, d_onay
                     veri_kaydet(df); cift_yedekleme_yap()
-                    st.success("✅ Sözleşme Başarıyla Güncellendi!"); st.rerun()
+                    st.success("✅ Güncellendi!"); st.rerun()
 
-       # 5. SAYFA: KULLANICI TANIMLAMA
+    # 5. SAYFA: KULLANICI TANIMLAMA
     elif sayfa == "👥 Kullanıcı Tanımlama" and st.session_state.kullanici_rolu == "Yönetici":
         st.markdown("<h3>👥 Dinamik Kullanıcı Hesapları ve Rol Atama</h3>", unsafe_allow_html=True)
         c_u1, c_u2 = st.columns(2)
@@ -278,20 +295,13 @@ else:
             u_rol = st.selectbox("Yetki Seviyesi (Rol)", ["Yönetici", "Personel"])
             if st.button("Hesabı Tanımla"):
                 if u_eposta and u_sifre:
-                    if kullanici_ekle(u_eposta, u_sifre, u_rol): 
-                        st.success("✅ Hesap oluşturuldu!")
-                        st.rerun()
-                    else: 
-                        st.error("Bu e-posta zaten kayıtlı!")
-                else: 
-                    st.error("Tüm alanları doldurun.")
-        with c_u2: 
-            st.dataframe(pd.read_csv(USERS_FILE)[["eposta", "rol"]], use_container_width=True)
+                    if kullanici_ekle(u_eposta, u_sifre, u_rol): st.success("✅ Hesap oluşturuldu!"); st.rerun()
+                    else: st.error("Bu e-posta zaten kayıtlı!")
+                else: st.error("Tüm alanları doldurun.")
+        with c_u2: st.dataframe(pd.read_csv(USERS_FILE)[["eposta", "rol"]], use_container_width=True)
 
     # 6. SAYFA: SİSTEM AYARLARI
     elif sayfa == "⚙️ Sistem & Yedekleme" and st.session_state.kullanici_rolu == "Yönetici":
         st.markdown("<h3>⚙️ Altyapı Yönetimi</h3>", unsafe_allow_html=True)
         st.metric("Toplam Sistem Veri Satırı", len(df))
-        if st.button("Şimdi Manuel Google Drive Yedeklemesi Tetikle"): 
-            st.info(cift_yedekleme_yap())
-
+        if st.button("Şimdi Manuel Google Drive Yedeklemesi Tetikle"): st.info(cift_yedekleme_yap())
