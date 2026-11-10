@@ -86,7 +86,7 @@ else:
         m4.metric("Tahsil Edilen Hakediş", f"{h_odenen:,.2f} TL", f"-{h_toplam - h_odenen:,.2f} TL Kalan")
         
         st.divider()
-        col_grafik, col_filtre = st.columns()
+        col_grafik, col_filtre = st.columns(2)
         
         with col_filtre:
             st.write("🔍 **Hızlı Filtreleme**")
