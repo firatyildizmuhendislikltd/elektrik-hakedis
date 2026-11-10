@@ -107,7 +107,7 @@ if "giris_yapildi" not in st.session_state:
 if not st.session_state.giris_yapildi:
     st.markdown("<h1 class='login-title' style='text-align: center;'>FIRAT YILDIZ MÜHENDİSLİK</h1>", unsafe_allow_html=True)
     st.markdown("<p class='login-subtitle' style='text-align: center; color: #475569;'>Kurumsal ERP & Finansal Kontrol Paneli</p>", unsafe_allow_html=True)
-    col_left, col_login, col_right = st.columns()
+    col_left, col_login, col_right = st.columns(3)
     with col_login:
         with st.form("giris_formu"):
             k_adi = st.text_input("Kurumsal E-Posta Adresi", placeholder="admin@firma.com")
