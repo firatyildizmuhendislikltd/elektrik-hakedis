@@ -72,8 +72,10 @@ else:
         st.divider()
         menü = ["📊 Genel Durum (Dashboard)", "📈 Kurumsal Raporlama"]
         if st.session_state.kullanici_rolu == "Yönetici":
-            menü.extend(["➕ Yeni Kayıt Ekle", "📝 Kayıt Düzenleme & Silme", "👥 Kullanıcı Tanımlama", "⚙️ Sistem & Yedekleme"])
-        sayfa = st.radio("Navigasyon Menüsü", menü, index=0)
+            menü = list(("📊 Genel Durum (Dashboard)", "📈 Kurumsal Raporlama", "➕ Yeni Kayıt Ekle"))
+        if st.session_state.kullanici_rolu == "Yönetici":
+            menü.extend(("📝 Kayıt Düzenleme & Silme", "👥 Kullanıcı Tanımlama", "⚙️ Sistem & Yedekleme"))
+
         st.divider()
         if st.button("🚪 Güvenli Çıkış Yap"):
             st.session_state.giris_yapildi = False
@@ -156,27 +158,31 @@ else:
             else:
                 st.info("Seçilen kriterlere uygun kayıt bulunamadı.")
 
-    elif sayfa == "➕ Yeni Kayıt Ekle" and st.session_state.kullanici_rolu == "Yönetici":
+       elif sayfa == "➕ Yeni Kayıt Ekle":
         st.markdown("<h3>➕ Yeni Teklif / Hakediş Kontrat Girişi (KDV Hesaplamalı)</h3>", unsafe_allow_html=True)
         with st.form("kurumsal_islem_formu", clear_on_submit=True):
             col_f1, col_f2 = st.columns(2)
             with col_f1:
-                tur = st.selectbox("İşlem Türü", ["Teklif", "Hakediş"])
+                tur = st.selectbox("İşlem Türü", list(("Teklif", "Hakediş")))
                 proje_adi = st.text_input("Proje / İş Başlığı")
                 musteri = st.text_input("Müşteri Firma / Kurum")
             with col_f2:
                 tutar = st.number_input("Sözleşme Matrah Tutarı (KDV Hariç)", min_value=0.0, format="%.2f")
                 kdv_orani = st.selectbox("KDV Oranı (%)", list((0, 1, 10, 20)), index=3)
-                para_birimi = st.selectbox("Para Birimi", ["TL", "USD", "EUR", "STG"])
-                durum = st.selectbox("Mevcut İş Durumu", ["Beklemede", "Onaylandı", "Reddedildi", "Ödendi / Tahsil Edildi"])
+                para_birimi = st.selectbox("Para Birimi", list(("TL", "USD", "EUR", "STG")))
+                durum = st.selectbox("Mevcut İş Durumu", list(("Beklemede", "Onaylandı", "Reddedildi", "Ödendi / Tahsil Edildi")))
             st.divider()
             col_f3, col_f4 = st.columns(2)
             with col_f3:
-                fatura_durumu = st.selectbox("Fatura Durumu", ["Faturalanmadı", "Faturalandı"])
+                fatura_durumu = st.selectbox("Fatura Durumu", list(("Faturalanmadı", "Faturalandı")))
             with col_f4:
-                yonetici_onayi = st.selectbox("Yönetici İlk Onay Durumu", ["Beklemede", "Onaylandı", "Reddedildi"])
+                if st.session_state.kullanici_rolu == "Yönetici":
+                    yonetici_onayi = st.selectbox("Yönetici İlk Onay Durumu", list(("Beklemede", "Onaylandı", "Reddedildi")))
+                else:
+                    yonetici_onayi = "Beklemede"
+                    st.info("ℹ️ Personel kayıtları otomatik olarak 'Yönetici Onayı: Beklemede' statüsünde kaydedilir.")
             
-            if st.form_submit_button("Sözleşmeyi Onayla, Otomatik KDV Hesapla ve Buluta Kaydet"):
+            if st.form_submit_button("Sözleşmeyi Kaydet ve Buluta Gönder"):
                 if not proje_adi or not musteri:
                     st.error("Lütfen alanları doldurun!")
                 else:
@@ -187,11 +193,10 @@ else:
                         "Müşteri/Kurum": musteri, "Tutar": tutar, "KDV Oranı (%)": kdv_orani, "KDV Tutarı": kdv_t, 
                         "KDV Dahil Toplam": kdv_d, "Para Birimi": para_birimi, "Durum": durum, "Fatura Durumu": fatura_durumu, "Yönetici Onayı": yonetici_onayi
                     }
-                    df = pd.concat([df, pd.DataFrame([yeni_satir])], ignore_index=True)
+                    df = pd.concat(list((df, pd.DataFrame(list((yeni_satir,))))), ignore_index=True)
                     verileri_google_sheets_kaydet(df)
                     st.success("✅ Kalıcı bulut veritabanına kaydedildi!")
                     st.rerun()
-
     # 4. SAYFA: TÜR DÜZENLEME VE KAYIT SİLME MODÜLÜ (YENİLENDİ)
     elif sayfa == "📝 Kayıt Düzenleme & Silme" and st.session_state.kullanici_rolu == "Yönetici":
         st.markdown("<h3>📝 Sözleşme Düzenleme, Tür Değiştirme ve Silme Paneli</h3>", unsafe_allow_html=True)
