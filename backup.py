@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import gspread
-import json
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 
@@ -16,7 +15,7 @@ SCOPES = [
 
 @st.cache_resource
 def baglanti_kur():
-    creds_dict = json.loads(st.secrets["gcp_service_account"], strict=False)
+    creds_dict = dict(st.secrets["gcp_service_account"])
     creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
     client = gspread.authorize(creds)
     drive_service = build('drive', 'v3', credentials=creds)
@@ -29,7 +28,7 @@ def tablo_getir_veya_olustur(dosya_adi, basliklar):
     files = results.get('files', [])
     
     if files:
-        sheet = client.open_by_key(files[0]['id']).sheet1
+        sheet = client.open_by_key(files['id']).sheet1
     else:
         file_metadata = {
             'name': dosya_adi,
