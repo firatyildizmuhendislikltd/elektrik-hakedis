@@ -70,13 +70,12 @@ else:
         st.write(f"👤 **Kullanıcı:** {st.session_state.kullanici_adi}")
         st.write(f"🎖️ **Yetki:** {st.session_state.kullanici_rolu}")
         st.divider()
-        menü = ["📊 Genel Durum (Dashboard)", "📈 Kurumsal Raporlama"]
-        if st.session_state.kullanici_rolu == "Yönetici":
-            menü = list(("📊 Genel Durum (Dashboard)", "📈 Kurumsal Raporlama", "➕ Yeni Kayıt Ekle"))
+        menü = list(("📊 Genel Durum (Dashboard)", "📈 Kurumsal Raporlama", "➕ Yeni Kayıt Ekle"))
         if st.session_state.kullanici_rolu == "Yönetici":
             menü.extend(("📝 Kayıt Düzenleme & Silme", "👥 Kullanıcı Tanımlama", "⚙️ Sistem & Yedekleme"))
-
+        sayfa = st.radio("Navigasyon Menüsü", menü, index=0)
         st.divider()
+
         if st.button("🚪 Güvenli Çıkış Yap"):
             st.session_state.giris_yapildi = False
             st.rerun()
