@@ -254,7 +254,7 @@ else:
             df_goster = pd.DataFrame([{"E-Posta": k, "Rol": v["rol"]} for k, v in k_sozluk.items()])
             st.dataframe(df_goster, use_container_width=True)
 
-          elif sayfa == "⚙️ Sistem & Yedekleme" and st.session_state.kullanici_rolu == "Yönetici":
+    elif sayfa == "⚙️ Sistem & Yedekleme" and st.session_state.kullanici_rolu == "Yönetici":
         st.markdown("<h3>⚙️ Altyapı Yönetimi</h3>", unsafe_allow_html=True)
         st.metric("Kalıcı Bulut Satır Sayısı", len(df))
         st.success("✅ Sistem doğrudan Google Drive klasörünüzdeki E-Tablo ile canlı senkronize çalışmaktadır.")
