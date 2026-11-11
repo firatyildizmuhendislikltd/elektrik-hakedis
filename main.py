@@ -166,7 +166,7 @@ else:
                 musteri = st.text_input("Müşteri Firma / Kurum")
             with col_f2:
                 tutar = st.number_input("Sözleşme Matrah Tutarı (KDV Hariç)", min_value=0.0, format="%.2f")
-                kdv_orani = st.selectbox("KDV Oranı (%)",, index=3)
+                kdv_orani = st.selectbox("KDV Oranı (%)", list((0, 1, 10, 20)), index=3)
                 para_birimi = st.selectbox("Para Birimi", ["TL", "USD", "EUR", "STG"])
                 durum = st.selectbox("Mevcut İş Durumu", ["Beklemede", "Onaylandı", "Reddedildi", "Ödendi / Tahsil Edildi"])
             st.divider()
