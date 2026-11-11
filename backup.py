@@ -29,7 +29,7 @@ def tablo_getir_veya_olustur(dosya_adi, basliklar):
     files = results.get('files', [])
     
     if files:
-        sheet = client.open_by_key(files[0]['id']).sheet1
+        sheet = client.open_by_key(files['id']).sheet1
     else:
         file_metadata = {
             'name': dosya_adi,
