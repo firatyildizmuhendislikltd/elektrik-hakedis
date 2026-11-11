@@ -16,7 +16,7 @@ SCOPES = [
 
 @st.cache_resource
 def baglanti_kur():
-    creds_dict = json.loads(st.secrets["gcp_service_account"])
+   creds_dict = dict(st.secrets["gcp_service_account"])
     creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
     client = gspread.authorize(creds)
     drive_service = build('drive', 'v3', credentials=creds)
