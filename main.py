@@ -200,7 +200,7 @@ else:
         else:
             proje_secenekleri = [f"{idx} - [{row['Tür']}] {row['Proje Adı']} (Matrah: {row['Tutar']} {row['Para Birimi']})" for idx, row in df.iterrows()]
             secilen_proje_str = st.selectbox("İşlem Yapılacak Sözleşmeyi Seçin", proje_secenekleri)
-            secilen_index = int(secilen_proje_str.split(" - "))
+            secilen_index = int(secilen_proje_str.split(" - ")[0])
             satir_verisi = df.loc[secilen_index]
             
             with st.form("duzenleme_formu"):
