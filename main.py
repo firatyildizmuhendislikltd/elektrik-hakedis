@@ -246,7 +246,7 @@ else:
                 st.success("🗑️ Kayıt sistemden ve bulut veritabanından kalıcı olarak silindi!")
                 st.rerun()
 
-       elif sayfa == "👥 Kullanıcı Tanımlama" and st.session_state.kullanici_rolu == "Yönetici":
+    elif sayfa == "👥 Kullanıcı Tanımlama" and st.session_state.kullanici_rolu == "Yönetici":
         st.markdown("<h3>👥 Dinamik Kullanıcı Hesapları ve Rol Atama</h3>", unsafe_allow_html=True)
         c_u1, c_u2 = st.columns(2)
         with c_u1:
