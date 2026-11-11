@@ -34,7 +34,6 @@ st.markdown("""
 
 CURRENCY_SYMBOLS = {"TL": "₺", "USD": "$", "EUR": "€", "STG": "£"}
 
-# Verileri doğrudan kalıcı Google E-Tablodan çekiyoruz
 df = verileri_google_sheets_yukle()
 if not df.empty:
     for col in ["Tutar", "KDV Oranı (%)", "KDV Tutarı", "KDV Dahil Toplam"]:
@@ -73,7 +72,7 @@ else:
         st.divider()
         menü = ["📊 Genel Durum (Dashboard)", "📈 Kurumsal Raporlama"]
         if st.session_state.kullanici_rolu == "Yönetici":
-            menü.extend(["➕ Yeni Kayıt Ekle", "📝 Kayıt Düzenleme & Onay", "👥 Kullanıcı Tanımlama", "⚙️ Sistem & Yedekleme"])
+            menü.extend(["➕ Yeni Kayıt Ekle", "📝 Kayıt Düzenleme & Silme", "👥 Kullanıcı Tanımlama", "⚙️ Sistem & Yedekleme"])
         sayfa = st.radio("Navigasyon Menüsü", menü, index=0)
         st.divider()
         if st.button("🚪 Güvenli Çıkış Yap"):
@@ -167,7 +166,7 @@ else:
                 musteri = st.text_input("Müşteri Firma / Kurum")
             with col_f2:
                 tutar = st.number_input("Sözleşme Matrah Tutarı (KDV Hariç)", min_value=0.0, format="%.2f")
-                kdv_orani = st.selectbox("KDV Oranı (%)", [0, 1, 10, 20], index=3)
+                kdv_orani = st.selectbox("KDV Oranı (%)",, index=3)
                 para_birimi = st.selectbox("Para Birimi", ["TL", "USD", "EUR", "STG"])
                 durum = st.selectbox("Mevcut İş Durumu", ["Beklemede", "Onaylandı", "Reddedildi", "Ödendi / Tahsil Edildi"])
             st.divider()
@@ -190,27 +189,30 @@ else:
                     }
                     df = pd.concat([df, pd.DataFrame([yeni_satir])], ignore_index=True)
                     verileri_google_sheets_kaydet(df)
-                    st.success("✅ Kalıcı Google Drive veritabanına kaydedildi!")
+                    st.success("✅ Kalıcı bulut veritabanına kaydedildi!")
                     st.rerun()
 
-    elif sayfa == "📝 Kayıt Düzenleme & Onay" and st.session_state.kullanici_rolu == "Yönetici":
-        st.markdown("<h3>📝 Sözleşme Düzenleme ve Yönetici Onay Paneli</h3>", unsafe_allow_html=True)
+    # 4. SAYFA: TÜR DÜZENLEME VE KAYIT SİLME MODÜLÜ (YENİLENDİ)
+    elif sayfa == "📝 Kayıt Düzenleme & Silme" and st.session_state.kullanici_rolu == "Yönetici":
+        st.markdown("<h3>📝 Sözleşme Düzenleme, Tür Değiştirme ve Silme Paneli</h3>", unsafe_allow_html=True)
         if df.empty:
-            st.info("Düzenlenecek kayıt bulunmamaktadır.")
+            st.info("Düzenlenecek veya silinecek kayıt bulunmamaktadır.")
         else:
             proje_secenekleri = [f"{idx} - [{row['Tür']}] {row['Proje Adı']} (Matrah: {row['Tutar']} {row['Para Birimi']})" for idx, row in df.iterrows()]
-            secilen_proje_str = st.selectbox("Düzenlenecek Sözleşmeyi Seçin", proje_secenekleri)
-            secilen_index = int(secilen_proje_str.split(" - ")[0])
+            secilen_proje_str = st.selectbox("İşlem Yapılacak Sözleşmeyi Seçin", proje_secenekleri)
+            secilen_index = int(secilen_proje_str.split(" - "))
             satir_verisi = df.loc[secilen_index]
             
             with st.form("duzenleme_formu"):
                 col_d1, col_d2 = st.columns(2)
                 with col_d1:
+                    # 🔄 İŞLEM TÜRÜNÜ (TEKLİF / HAKEDİŞ) DEĞİŞTİRME ALANI EKLENDİ
+                    d_tur = st.selectbox("İşlem Türü (Değiştirilebilir)", ["Teklif", "Hakediş"], index=["Teklif", "Hakediş"].index(satir_verisi["Tür"]))
                     d_proje = st.text_input("Proje / İş Başlığı", value=satir_verisi["Proje Adı"])
                     d_musteri = st.text_input("Müşteri Firma / Kurum", value=satir_verisi["Müşteri/Kurum"])
                     d_tutar = st.number_input("Sözleşme Matrah Tutarı", min_value=0.0, format="%.2f", value=float(satir_verisi["Tutar"]))
                 with col_d2:
-                    kdv_opsiyonlari = [0, 1, 10, 20]
+                    kdv_opsiyonlari =
                     mevcut_kdv = int(satir_verisi["KDV Oranı (%)"])
                     d_kdv_oran = st.selectbox("KDV Oranı (%)", kdv_opsiyonlari, index=kdv_opsiyonlari.index(mevcut_kdv) if mevcut_kdv in kdv_opsiyonlari else 3)
                     d_pb = st.selectbox("Para Birimi", ["TL", "USD", "EUR", "STG"], index=["TL", "USD", "EUR", "STG"].index(satir_verisi["Para Birimi"]))
@@ -222,18 +224,29 @@ else:
                 with col_d4:
                     d_onay = st.selectbox("👑 Yönetici Onay Durumu Güncelle", ["Beklemede", "Onaylandı", "Reddedildi"], index=["Beklemede", "Onaylandı", "Reddedildi"].index(satir_verisi["Yönetici Onayı"]))
                 
-                if st.form_submit_button("Değişiklikleri Kaydet ve Buluta İşle"):
+                if st.form_submit_button("✅ Değişiklikleri Kaydet ve Buluta İşle"):
                     kdv_t = d_tutar * (d_kdv_oran / 100)
+                    df.at[secilen_index, "Tür"] = d_tur
                     df.at[secilen_index, "Proje Adı"], df.at[secilen_index, "Müşteri/Kurum"] = d_proje, d_musteri
                     df.at[secilen_index, "Tutar"], df.at[secilen_index, "KDV Oranı (%)"] = d_tutar, d_kdv_oran
                     df.at[secilen_index, "KDV Tutarı"], df.at[secilen_index, "KDV Dahil Toplam"] = kdv_t, d_tutar + kdv_t
                     df.at[secilen_index, "Para Birimi"], df.at[secilen_index, "Durum"] = d_pb, d_durum
                     df.at[secilen_index, "Fatura Durumu"], df.at[secilen_index, "Yönetici Onayı"] = d_fatura, d_onay
                     verileri_google_sheets_kaydet(df)
-                    st.success("✅ Güncellendi!")
+                    st.success("✅ Sözleşme başarıyla güncellendi!")
                     st.rerun()
 
-    elif sayfa == "👥 Kullanıcı Tanımlama" and st.session_state.kullanici_rolu == "Yönetici":
+            # 🗑️ KAYIT SİLME BÖLÜMÜ
+            st.divider()
+            st.markdown("#### 🗑️ Tehlikeli İşlem: Kayıt Silme")
+            st.warning(f"Dikkat: **[{satir_verisi['Tür']}] {satir_verisi['Proje Adı']}** kaydını kalıcı olarak silmek üzeresiniz. Bu işlem geri alınamaz.")
+            if st.button("🚨 Seçili Kaydı Sistemden Kalıcı Olarak Sil"):
+                df = df.drop(index=secilen_index).reset_index(drop=True)
+                verileri_google_sheets_kaydet(df)
+                st.success("🗑️ Kayıt sistemden ve bulut veritabanından kalıcı olarak silindi!")
+                st.rerun()
+
+       elif sayfa == "👥 Kullanıcı Tanımlama" and st.session_state.kullanici_rolu == "Yönetici":
         st.markdown("<h3>👥 Dinamik Kullanıcı Hesapları ve Rol Atama</h3>", unsafe_allow_html=True)
         c_u1, c_u2 = st.columns(2)
         with c_u1:
@@ -243,7 +256,7 @@ else:
             if st.button("Hesabı Tanımla"):
                 if u_eposta and u_sifre:
                     if kullanici_google_sheets_ekle(u_eposta, u_sifre, u_rol):
-                        st.success("✅ Hesap Google E-Tabloya eklendi!")
+                        st.success("✅ Hesap bulut veritabanına eklendi!")
                         st.rerun()
                     else:
                         st.error("Bu e-posta zaten kayıtlı!")
@@ -257,5 +270,4 @@ else:
     elif sayfa == "⚙️ Sistem & Yedekleme" and st.session_state.kullanici_rolu == "Yönetici":
         st.markdown("<h3>⚙️ Altyapı Yönetimi</h3>", unsafe_allow_html=True)
         st.metric("Kalıcı Bulut Satır Sayısı", len(df))
-        st.success("✅ Sistem doğrudan Google Drive klasörünüzdeki E-Tablo ile canlı senkronize çalışmaktadır.")
-
+        st.success("✅ Sistem doğrudan Supabase bulut veritabanı ile canlı senkronize çalışmaktadır.")
