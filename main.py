@@ -212,7 +212,7 @@ else:
                     d_musteri = st.text_input("Müşteri Firma / Kurum", value=satir_verisi["Müşteri/Kurum"])
                     d_tutar = st.number_input("Sözleşme Matrah Tutarı", min_value=0.0, format="%.2f", value=float(satir_verisi["Tutar"]))
                 with col_d2:
-                    kdv_opsiyonlari =
+                    kdv_opsiyonlari = list((0, 1, 10, 20))
                     mevcut_kdv = int(satir_verisi["KDV Oranı (%)"])
                     d_kdv_oran = st.selectbox("KDV Oranı (%)", kdv_opsiyonlari, index=kdv_opsiyonlari.index(mevcut_kdv) if mevcut_kdv in kdv_opsiyonlari else 3)
                     d_pb = st.selectbox("Para Birimi", ["TL", "USD", "EUR", "STG"], index=["TL", "USD", "EUR", "STG"].index(satir_verisi["Para Birimi"]))
