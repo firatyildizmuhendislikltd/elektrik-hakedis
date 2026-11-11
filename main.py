@@ -158,7 +158,7 @@ else:
             else:
                 st.info("Seçilen kriterlere uygun kayıt bulunamadı.")
 
-       elif sayfa == "➕ Yeni Kayıt Ekle":
+    elif sayfa == "➕ Yeni Kayıt Ekle":
         st.markdown("<h3>➕ Yeni Teklif / Hakediş Kontrat Girişi (KDV Hesaplamalı)</h3>", unsafe_allow_html=True)
         with st.form("kurumsal_islem_formu", clear_on_submit=True):
             col_f1, col_f2 = st.columns(2)
